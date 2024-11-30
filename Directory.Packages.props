@@ -1,0 +1,19 @@
+<Project>
+	<PropertyGroup>
+		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+		<CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+		<CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
+	</PropertyGroup>
+	
+	<ItemGroup>
+	</ItemGroup>
+
+	<!--Pre release-->
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+	</ItemGroup>
+
+	<!--Stable-->
+	<ItemGroup Condition="'$(Configuration)' != 'Debug'">
+	</ItemGroup>
+
+</Project>
