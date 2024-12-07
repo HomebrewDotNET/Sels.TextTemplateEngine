@@ -6,4 +6,13 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Components\Engine\" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Sels.Core" />
+		<PackageReference Include="Sels.Core.ServiceBuilder.Polly" />
+	</ItemGroup>
+
 </Project>

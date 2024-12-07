@@ -1,19 +1,24 @@
 <Project>
-	<PropertyGroup>
-		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-		<CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
-		<CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
-	</PropertyGroup>
-	
-	<ItemGroup>
-	</ItemGroup>
-
-	<!--Pre release-->
-	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-	</ItemGroup>
-
-	<!--Stable-->
-	<ItemGroup Condition="'$(Configuration)' != 'Debug'">
-	</ItemGroup>
-
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+    <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+	  <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+  </ItemGroup>
+  <!--Pre release-->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <PackageVersion Include="Sels.Core" Version="5.0.0-*" />
+    <PackageVersion Include="Sels.Core.Conversion" Version="2.0.0-*" />
+    <PackageVersion Include="Sels.ObjectValidationFramework" Version="6.0.0-*" />
+    <PackageVersion Include="Sels.Core.ServiceBuilder.Polly" Version="1.0.0-*" />
+  </ItemGroup>
+  <!--Stable-->
+  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+    <PackageVersion Include="Sels.Core" Version="5.0.0" />
+    <PackageVersion Include="Sels.Core.Conversion" Version="2.0.0" />
+    <PackageVersion Include="Sels.ObjectValidationFramework" Version="6.0.0" />
+    <PackageVersion Include="Sels.Core.ServiceBuilder.Polly" Version="1.0.0" />
+  </ItemGroup>
 </Project>

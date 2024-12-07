@@ -5,6 +5,18 @@ VisualStudioVersion = 17.12.35521.163 d17.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sels.TextTemplateEngine", "Sels.TextTemplateEngine\Sels.TextTemplateEngine.csproj", "{E4002967-9C58-48B3-8DD2-B40154D0E382}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3AD9DD08-071E-451D-BC0E-23402D63A1DC}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\Directory.Build.props = ..\..\Directory.Build.props
+		..\..\Directory.Packages.props = ..\..\Directory.Packages.props
+		..\..\LICENSE.md = ..\..\LICENSE.md
+		..\..\NOTICE = ..\..\NOTICE
+		..\..\NuGet.Config = ..\..\NuGet.Config
+		..\..\README.md = ..\..\README.md
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sels.TextTemplateEngine.TestTool", "Sels.TextTemplateEngine.TestTool\Sels.TextTemplateEngine.TestTool.csproj", "{2D6BD783-120D-4FBC-8654-4CC4C3B862C9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +27,10 @@ Global
 		{E4002967-9C58-48B3-8DD2-B40154D0E382}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E4002967-9C58-48B3-8DD2-B40154D0E382}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E4002967-9C58-48B3-8DD2-B40154D0E382}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2D6BD783-120D-4FBC-8654-4CC4C3B862C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D6BD783-120D-4FBC-8654-4CC4C3B862C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D6BD783-120D-4FBC-8654-4CC4C3B862C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D6BD783-120D-4FBC-8654-4CC4C3B862C9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,16 @@
+﻿
+${{#Script("TemplateContext")}}
+	Console.Writeline($"Hello from script block {TemplateContext.CurrentExpression.Position}")
+${{/Script}}
+Hello ${{person.Name}} ${{person.Surname}}!
+
+${{! Print user orders and totals }}
+These are your orders:
+${{#ForEach:Source=${{person.Orders}};ItemName="Order";TrimLeading=true}}
+	Order Id: ${{Order.Id}}
+	Order Date: ${{Order.Date}}
+	Order Total: ${{Order.Total}}
+${{/ForEach}}
+
+Total Orders: ${{person.Orders.Count}}
+Total Orders Total: <% ${{person}}.Orders.Sum(Order => Order.Total %>
