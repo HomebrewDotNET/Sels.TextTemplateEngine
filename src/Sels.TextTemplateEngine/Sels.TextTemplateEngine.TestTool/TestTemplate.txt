@@ -1,16 +1,18 @@
-﻿
-${{#Script("TemplateContext")}}
+﻿${{#Script("TemplateContext")}}
 	Console.Writeline($"Hello from script block {TemplateContext.CurrentExpression.Position}")
 ${{/Script}}
-Hello ${{person.Name}} ${{person.Surname}}!
+Hello @{{ person.Name }} @{{person.Surname}}!
+${{Snippet.Define("PrintOrderProperty", Order, Property)}}
+	Order @{{Property}}: ${{GetFromPath(@{{Order}}, @{{Property}})}}
+${{/Snippet.Define}}
 
 ${{! Print user orders and totals }}
 These are your orders:
-${{#ForEach:Source=${{person.Orders}};ItemName="Order";TrimLeading=true}}
-	Order Id: ${{Order.Id}}
-	Order Date: ${{Order.Date}}
-	Order Total: ${{Order.Total}}
+${{#ForEach:Source=@{{person.Orders}};ItemName="Order";TrimLeading=true}}
+	${{PrintOrderProperty(@{{Order}}, "Id")}} 
+	${{PrintOrderProperty(@{{Order}}, "Date")}} 
+	${{PrintOrderProperty(@{{Order}}, "Total")}}
 ${{/ForEach}}
 
-Total Orders: ${{person.Orders.Count}}
-Total Orders Total: <% ${{person}}.Orders.Sum(Order => Order.Total %>
+Total Orders: ${{IsNull(@{{person?.Orders?.Count}}, 0)}}
+Total Orders Total: <% @{{person}}.Orders.Sum(Order => Order.Total) %>

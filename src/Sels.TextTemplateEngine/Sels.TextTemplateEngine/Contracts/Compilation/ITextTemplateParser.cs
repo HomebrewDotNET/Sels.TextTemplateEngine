@@ -19,7 +19,7 @@ namespace Sels.TextTemplateEngine.Compilation
         /// <param name="tokens">Enumerator returning all the token to parse</param>
         /// <param name="cancellationToken">Optional token to cancel the request</param>
         /// <returns>The expression that represents the root of the syntax tree</returns>
-        public Task<ITextTemplateSyntaxExpression> ParseAsync(IEnumerable<ITextTemplateExpressionParser> parsers, IAsyncEnumerable<ITextTemplateToken> tokens, CancellationToken cancellationToken = default);
+        public Task<SyntaxTreeRootExpression> ParseAsync(IEnumerable<ITextTemplateExpressionParser> parsers, IAsyncEnumerable<ITextTemplateToken> tokens, CancellationToken cancellationToken = default);
     }
 
     /// <summary>
@@ -97,7 +97,8 @@ namespace Sels.TextTemplateEngine.Compilation
         /// <param name="bufferOffset">Used to skip the first n tokens in <see cref="Buffer"/> so sub context doesn't see them</param>
         /// <param name="bufferLimit">Limit the amount of token that can be read from <paramref name="bufferLimit"/> starting from <paramref name="bufferOffset"/></param>
         /// <param name="canReadNext">Indicates if the sub scope is allowed to read the next character</param>
+        /// <param name="consumeTokens">When set to true tokens that are parsed by the sub scope will be removed from it's buffer. When disposing the remaining tokens will become the new buffer of the parent. When set to false the tokens read by the sub scope will be added to the buffer of the parent scope</param>
         /// <returns>A sub scope that can be used to call parsers. Should be disposed once done</returns>
-        public ITextTemplateParserContext CreateScope(ITextTemplateExpressionParser current, string? scope = null, int bufferOffset = 0, int? bufferLimit = null, bool canReadNext = true);
+        public ITextTemplateParserContext CreateScope(ITextTemplateExpressionParser current, string? scope = null, int bufferOffset = 0, int? bufferLimit = null, bool canReadNext = true, bool consumeTokens = true);
     }
 }

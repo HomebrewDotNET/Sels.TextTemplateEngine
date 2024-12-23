@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sels.TextTemplateEngine.Templates.Compilation.Tokens
+namespace Sels.TextTemplateEngine.Templates.Compilation.Lexing.Tokens
 {
     /// <summary>
     /// Base class for all tokens that are lexed from a sequence of characters.
@@ -19,10 +19,10 @@ namespace Sels.TextTemplateEngine.Templates.Compilation.Tokens
         /// <inheritdoc/>
         public abstract string Type { get; }
         /// <inheritdoc/>
-        public int Position { get; init; }
-        /// <inheritdoc/>
         public int Length => Characters.Count;
         /// <inheritdoc/>
-        public int Line { get; init;  }
+        public TokenPosition Position { get; init; }
+        /// <inheritdoc/>
+        IEnumerable<char> ITextTemplateToken.TextValue => Characters;
     }
 }

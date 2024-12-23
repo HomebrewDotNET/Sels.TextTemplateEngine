@@ -42,6 +42,22 @@ namespace Microsoft.Extensions.DependencyInjection
                     .AsForwardedService()
                     .TryRegisterImplementation();
 
+            services.New<AccessorExpressionParser>()
+                    .ConstructWith(x => new AccessorExpressionParser(90))
+                    .TryRegister();
+            services.New<ITextTemplateExpressionParser, AccessorExpressionParser>()
+                    .Trace(x => x.Duration.OfAll)
+                    .AsForwardedService()
+                    .TryRegisterImplementation();
+
+            services.New<InvocationExpressionParser>()
+                    .ConstructWith(x => new InvocationExpressionParser(100))
+                    .TryRegister();
+            services.New<ITextTemplateExpressionParser, InvocationExpressionParser>()
+                    .Trace(x => x.Duration.OfAll)
+                    .AsForwardedService()
+                    .TryRegisterImplementation();
+
             return services;
         }
 
@@ -64,7 +80,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
             // Token lexers
             services.New<SimpleRecurringMatchingSetLexer<WhitespaceTextTemplateToken>>()
-                    .ConstructWith(x => new SimpleRecurringMatchingSetLexer<WhitespaceTextTemplateToken>(char.IsWhiteSpace, (c, p, s) => new WhitespaceTextTemplateToken(s) { Position = p, Line = c.Line}, (byte)(NewLineTextTemplateTokenLexer.LexerPriority+1)))
+                    .ConstructWith(x => new SimpleRecurringMatchingSetLexer<WhitespaceTextTemplateToken>(char.IsWhiteSpace, (c, p, s) => new WhitespaceTextTemplateToken(s) { Position = new TokenPosition() { Index = p, Line = c.Line, LineIndex = c.BufferLineIndex } }, (byte)(NewLineTextTemplateTokenLexer.LexerPriority+1)))
                     .AsSingleton()
                     .TryRegister();
             services.New<ITextTemplateTokenLexer, SimpleRecurringMatchingSetLexer<WhitespaceTextTemplateToken>>()
@@ -89,6 +105,15 @@ namespace Microsoft.Extensions.DependencyInjection
                     .Trace(x => x.Duration.OfAll)
                     .TryRegisterImplementation();
 
+            services.New<SimpleSequenceTokenLexer<AccessorStartToken>>()
+                    .ConstructWith(x => new SimpleSequenceTokenLexer<AccessorStartToken>(TextTemplateEngineConstants.Compilation.Syntax.AccessorStartToken, 10))
+                    .AsSingleton()
+                    .TryRegister();
+            services.New<ITextTemplateTokenLexer, SimpleSequenceTokenLexer<AccessorStartToken>>()
+                    .AsForwardedService()
+                    .Trace(x => x.Duration.OfAll)
+                    .TryRegisterImplementation();
+
             services.New<SimpleSequenceTokenLexer<CommentToken>>()
                     .ConstructWith(x => new SimpleSequenceTokenLexer<CommentToken>(TextTemplateEngineConstants.Compilation.Syntax.CommentStartToken, 10))
                     .AsSingleton()
@@ -108,7 +133,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     .TryRegisterImplementation();
 
             services.New<SimpleRecurringMatchingSetLexer<IdentifierToken>>()
-                    .ConstructWith(x => new SimpleRecurringMatchingSetLexer<IdentifierToken>(char.IsLetterOrDigit, (c, p, s) => new IdentifierToken(s) { Position = p, Line = c.Line }, 25))
+                    .ConstructWith(x => new SimpleRecurringMatchingSetLexer<IdentifierToken>(char.IsLetterOrDigit, (c, p, s) => new IdentifierToken(s) { Position = new TokenPosition() { Index = p, Line = c.Line, LineIndex = c.BufferLineIndex } }, 25))
                     .AsSingleton()
                     .TryRegister();
             services.New<ITextTemplateTokenLexer, SimpleRecurringMatchingSetLexer<IdentifierToken>>()
@@ -134,6 +159,60 @@ namespace Microsoft.Extensions.DependencyInjection
                     .Trace(x => x.Duration.OfAll)
                     .TryRegisterImplementation();
 
+            services.New<SimpleSequenceTokenLexer<InvocationNamedParameterStartToken>>()
+                    .ConstructWith(x => new SimpleSequenceTokenLexer<InvocationNamedParameterStartToken>(TextTemplateEngineConstants.Compilation.Syntax.InvocationNamedParameterStart, 50))
+                    .AsSingleton()
+                    .TryRegister();
+            services.New<ITextTemplateTokenLexer, SimpleSequenceTokenLexer<InvocationNamedParameterStartToken>>()
+                    .AsForwardedService()
+                    .Trace(x => x.Duration.OfAll)
+                    .TryRegisterImplementation();
+
+            services.New<SimpleSequenceTokenLexer<InvocationParameterOrGroupStartToken>>()
+                    .ConstructWith(x => new SimpleSequenceTokenLexer<InvocationParameterOrGroupStartToken>(TextTemplateEngineConstants.Compilation.Syntax.InvocationParameterOrGroupStart, 50))
+                    .AsSingleton()
+                    .TryRegister();
+            services.New<ITextTemplateTokenLexer, SimpleSequenceTokenLexer<InvocationParameterOrGroupStartToken>>()
+                    .AsForwardedService()
+                    .Trace(x => x.Duration.OfAll)
+                    .TryRegisterImplementation();
+
+            services.New<SimpleSequenceTokenLexer<InvocationParameterOrGroupEndToken>>()
+                    .ConstructWith(x => new SimpleSequenceTokenLexer<InvocationParameterOrGroupEndToken>(TextTemplateEngineConstants.Compilation.Syntax.InvocationParameterOrGroupEnd, 50))
+                    .AsSingleton()
+                    .TryRegister();
+            services.New<ITextTemplateTokenLexer, SimpleSequenceTokenLexer<InvocationParameterOrGroupEndToken>>()
+                    .AsForwardedService()
+                    .Trace(x => x.Duration.OfAll)
+                    .TryRegisterImplementation();
+
+            services.New<SimpleSequenceTokenLexer<PositionalParameterSplitToken>>()
+                    .ConstructWith(x => new SimpleSequenceTokenLexer<PositionalParameterSplitToken>(TextTemplateEngineConstants.Compilation.Syntax.PositionalParameterSplit, 100))
+                    .AsSingleton()
+                    .TryRegister();
+            services.New<ITextTemplateTokenLexer, SimpleSequenceTokenLexer<PositionalParameterSplitToken>>()
+                    .AsForwardedService()
+                    .Trace(x => x.Duration.OfAll)
+                    .TryRegisterImplementation();
+
+            services.New<SimpleSequenceTokenLexer<NamedParameterSplitToken>>()
+                    .ConstructWith(x => new SimpleSequenceTokenLexer<NamedParameterSplitToken>(TextTemplateEngineConstants.Compilation.Syntax.NamedParameterSplit, 100))
+                    .AsSingleton()
+                    .TryRegister();
+            services.New<ITextTemplateTokenLexer, SimpleSequenceTokenLexer<NamedParameterSplitToken>>()
+                    .AsForwardedService()
+                    .Trace(x => x.Duration.OfAll)
+                    .TryRegisterImplementation();
+
+            services.New<SimpleSequenceTokenLexer<AssignmentOperatorToken>>()
+                    .ConstructWith(x => new SimpleSequenceTokenLexer<AssignmentOperatorToken>(TextTemplateEngineConstants.Compilation.Syntax.AssignmentOperator, 100))
+                    .AsSingleton()
+                    .TryRegister();
+            services.New<ITextTemplateTokenLexer, SimpleSequenceTokenLexer<AssignmentOperatorToken>>()
+                    .AsForwardedService()
+                    .Trace(x => x.Duration.OfAll)
+                    .TryRegisterImplementation();
+
             services.New<SimpleSequenceTokenLexer<ElvisOperatorToken>>()
                     .ConstructWith(x => new SimpleSequenceTokenLexer<ElvisOperatorToken>(TextTemplateEngineConstants.Compilation.Syntax.ElvisOperator, 100))
                     .AsSingleton()
@@ -143,11 +222,11 @@ namespace Microsoft.Extensions.DependencyInjection
                     .Trace(x => x.Duration.OfAll)
                     .TryRegisterImplementation();
 
-            services.New<SimpleSequenceTokenLexer<SubPropertyDivisorToken>>()
-                    .ConstructWith(x => new SimpleSequenceTokenLexer<SubPropertyDivisorToken>(TextTemplateEngineConstants.Compilation.Syntax.SubPropertyDivisor, 100))
+            services.New<SimpleSequenceTokenLexer<SubPropertyOrIdentifierDivisorToken>>()
+                    .ConstructWith(x => new SimpleSequenceTokenLexer<SubPropertyOrIdentifierDivisorToken>(TextTemplateEngineConstants.Compilation.Syntax.SubPropertyOrIdentifierDivisor, 100))
                     .AsSingleton()
                     .TryRegister();
-            services.New<ITextTemplateTokenLexer, SimpleSequenceTokenLexer<SubPropertyDivisorToken>>()
+            services.New<ITextTemplateTokenLexer, SimpleSequenceTokenLexer<SubPropertyOrIdentifierDivisorToken>>()
                     .AsForwardedService()
                     .Trace(x => x.Duration.OfAll)
                     .TryRegisterImplementation();

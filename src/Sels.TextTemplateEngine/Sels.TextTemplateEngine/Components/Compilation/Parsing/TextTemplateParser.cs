@@ -12,6 +12,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using static Sels.Core.Delegates.Async;
 
 namespace Sels.TextTemplateEngine.Compilation.Parsing
 {
@@ -29,7 +30,7 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
         }
 
         /// <inheritdoc/>
-        public async Task<ITextTemplateSyntaxExpression> ParseAsync(IEnumerable<ITextTemplateExpressionParser> parsers, IAsyncEnumerable<ITextTemplateToken> tokens, CancellationToken cancellationToken = default)
+        public async Task<SyntaxTreeRootExpression> ParseAsync(IEnumerable<ITextTemplateExpressionParser> parsers, IAsyncEnumerable<ITextTemplateToken> tokens, CancellationToken cancellationToken = default)
         {
             tokens = Guard.IsNotNull(tokens);
             var expressionParsers = Guard.IsNotNull(parsers).Where(x => x != null).OrderBy(x => x.Priority).ToArray();
@@ -89,6 +90,7 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
             private readonly IAsyncEnumerator<ITextTemplateToken> _tokenEnumerator;
 
             // Properties
+            protected override AsyncFunc<CancellationToken, ITextTemplateToken?> TryReadNext => TryReadNextAsync;
 
             public RootContext(IEnumerable<ITextTemplateExpressionParser> parsers, IAsyncEnumerator<ITextTemplateToken> tokenEnumerator, ILogger? logger) : base(parsers, logger)
             {
@@ -103,7 +105,7 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                 _logger.Debug($"Reading next token into buffer");
                 if (await _tokenEnumerator.MoveNextAsync())
                 {
-                    Buffer.Add(_tokenEnumerator.Current);
+                    if(!_subScopeActive) Buffer.Add(_tokenEnumerator.Current);
                     _logger.Debug($"Added token <{_tokenEnumerator.Current}> to buffer");
                     IsLastToken = false;
                     return _tokenEnumerator.Current;
@@ -131,9 +133,13 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
             protected readonly ILogger? _logger;
             private readonly int? _readLimit;
             private readonly int _offset;
+            private readonly List<ITextTemplateToken>? _readTokens;
+            private readonly Action? _disposeAction;
+            private readonly AsyncFunc<CancellationToken, ITextTemplateToken?>? _tryReadNext;
 
             // State
             private int _tokensRead = 0;
+            protected bool _subScopeActive = false;
 
             // Properties
             /// <inheritdoc/>
@@ -150,9 +156,11 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
             public string? ParserScope { get; init; }
             /// <inheritdoc/>
             public ITextTemplateParserContext? ParentContext { get; protected set; }
+            protected virtual AsyncFunc<CancellationToken, ITextTemplateToken?> TryReadNext => Guard.IsNotNull(_tryReadNext);
 
-            public SubContext(ITextTemplateParserContext parentContext, int offset, int? readLimit, bool canRead, ILogger? logger)
+            public SubContext(AsyncFunc<CancellationToken, ITextTemplateToken?> tryReadNext, ITextTemplateParserContext parentContext, int offset, int? readLimit, bool canRead, bool consumeTokens, Action? disposeAction, ILogger? logger)
             {
+                _tryReadNext = Guard.IsNotNull(tryReadNext);
                 ParentContext = Guard.IsNotNull(parentContext);
                 Root = ParentContext.Root;
                 Parsers = ParentContext.Parsers;
@@ -161,6 +169,8 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                 Buffer = ParentContext.Buffer.Skip(offset).Take(readLimit.HasValue ? readLimit.Value : ParentContext.Buffer.Count).ToList();
                 if (readLimit.HasValue) _tokensRead = readLimit.Value - Buffer.Count;
                 _readLimit = readLimit;
+                if (!consumeTokens) _readTokens = new List<ITextTemplateToken>();
+                _disposeAction = disposeAction;
                 _logger = logger;
             }
 
@@ -201,6 +211,7 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
             public async IAsyncEnumerable<ITextTemplateSyntaxExpression> ParseAsync(ITextTemplateExpressionParser parser, [EnumeratorCancellation] CancellationToken cancellationToken = default)
             {
                 parser = Guard.IsNotNull(parser);
+                if (_subScopeActive) throw new InvalidOperationException("Sub scope active. Parse not allowed");
                 _logger.Debug($"Using parser <{parser}> to parse current buffer of size <{Buffer.Count}>");
 
                 var expression = Guard.IsNotNull(await parser.ParseAsync(this, cancellationToken));
@@ -212,8 +223,8 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                 // Get index of first token in buffer
                 var firstTokenIndex = Guard.IsLargerOrEqual(Buffer.IndexOf(expression.Tokens.First()), 0);
                 // Check that tokens length is not longer than buffer after first token
-                var remainingBuffer = Buffer.Take(firstTokenIndex).ToList();
-                _ = Guard.Is(expression.Tokens, x => x.Count <= remainingBuffer.Count);
+                var remainingBuffer = Buffer.Skip(firstTokenIndex).ToList();
+                _ = Guard.Is(expression.Tokens, x => x.GetCount() <= remainingBuffer.Count);
 
                 // Try parse tokens before expression
                 var bufferBeforeExpression = Buffer.Take(firstTokenIndex).ToList();
@@ -249,6 +260,7 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
             public async Task FlushAsync(List<ITextTemplateSyntaxExpression> expressions, IEnumerable<ITextTemplateToken> tokens, CancellationToken cancellationToken = default)
             {
                 tokens = Guard.IsNotNull(tokens);
+                if (_subScopeActive) throw new InvalidOperationException("Sub scope active. Flush not allowed");
 
                 var currentTextTokens = new List<ITextTemplateToken>();
                 foreach (var token in tokens)
@@ -276,15 +288,30 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
             }
 
             /// <inheritdoc/>
-            public virtual ITextTemplateParserContext CreateScope(ITextTemplateExpressionParser current, string? scope = null, int bufferOffset = 0, int? bufferLimit = null, bool canReadNext = true)
+            public virtual ITextTemplateParserContext CreateScope(ITextTemplateExpressionParser current, string? scope = null, int bufferOffset = 0, int? bufferLimit = null, bool canReadNext = true, bool consumeTokens = true)
             {
                 current = Guard.IsNotNull(current);
-                return new SubContext(this, bufferOffset, bufferLimit, canReadNext, _logger);
+                if(_subScopeActive) throw new InvalidOperationException("Sub scope already active for the current scope. Dispose the active one before starting a new one");
+                _subScopeActive = true;
+                return new SubContext(_readTokens != null ? async t =>
+                {
+                    var token = await TryReadNext(t);
+                    if(token != null) _readTokens.Add(token);
+                    return token;
+                } : TryReadNext, this, bufferOffset, bufferLimit, canReadNext, consumeTokens, () =>
+                {
+                    _subScopeActive = false;
+                }, _logger)
+                {
+                    ParserScope = scope,
+                    ParentParser = current
+                };
             }
 
             /// <inheritdoc/>
             public virtual async Task<ITextTemplateToken?> TryReadNextAsync(CancellationToken cancellationToken = default)
             {
+                if (_subScopeActive) throw new InvalidOperationException("Sub scope active. Token reading not allowed");
                 _logger.Debug($"Scope reading next token into buffer");
 
                 if (IsLastToken)
@@ -298,8 +325,8 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                     return null;
                 }
 
-                var expression = await ParentContext!.TryReadNextAsync(cancellationToken);
-                if (expression == null)
+                var token = await TryReadNext(cancellationToken);
+                if (token == null)
                 {
                     _logger.Debug($"Scope reached last token");
                     IsLastToken = true;
@@ -307,28 +334,38 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                 }
                 else
                 {
-                    Buffer.Add(expression);
+                    Buffer.Add(token);
+                    _readTokens?.Add(token);
                     _tokensRead++;
-                    _logger.Debug($"Scope added token <{expression}> to it's buffer");
-                    return expression;
+                    _logger.Debug($"Scope added token <{token}> to it's buffer");
+                    return token;
                 }
             }
 
             /// <inheritdoc/>
             public virtual void Dispose()
             {
-                if (_offset > 0)
+                if(_readTokens != null) // Token consumption disabled so add tokens to parent buffer
                 {
-                    if (Buffer.Count > 0 && !Buffer.All(x => ParentContext!.Buffer.Contains(x))) throw new InvalidOperationException($"Scope was created with offset of {_offset} but there are still <{Buffer.Count}> tokens in the scope causing a gap. Consume token first before disposing scope");
-
-                    // Scope buffer fully consumed or all tokens are in parent buffer so nothing to do
+                    ParentContext!.Buffer.AddRange(_readTokens.Where(x => !ParentContext!.Buffer.Contains(x)));
                 }
                 else
                 {
-                    // Scope buffer is now parent buffer since parent shouldn't have any tokens
-                    ParentContext!.Buffer.Clear();
-                    ParentContext!.Buffer.AddRange(Buffer);
+                    if (_offset > 0)
+                    {
+                        if (Buffer.Count > 0 && !Buffer.All(x => ParentContext!.Buffer.Contains(x))) throw new InvalidOperationException($"Scope was created with offset of {_offset} but there are still <{Buffer.Count}> tokens in the scope causing a gap. Consume token first before disposing scope");
+
+                        // Scope buffer fully consumed or all tokens are in parent buffer so nothing to do
+                    }
+                    else
+                    {
+                        // Scope buffer is now parent buffer since parent shouldn't have any tokens
+                        ParentContext!.Buffer.Clear();
+                        ParentContext!.Buffer.AddRange(Buffer);
+                    }
                 }
+
+                _disposeAction?.Invoke();
             }
         }
     }

@@ -16,16 +16,16 @@ namespace Sels.TextTemplateEngine.Compilation
         /// </summary>
         public string Type { get; }
         /// <summary>
-        /// The tokens that were used to create the current epxression.
+        /// The tokens that were used to create the current epxression. Includes the tokens from <see cref="Children"/>.
         /// </summary>
-        public IReadOnlyCollection<ITextTemplateToken> Tokens { get; }
+        public IEnumerable<ITextTemplateToken> Tokens { get; }
         /// <summary>
         /// The parent expression if the current expression isn't the root expression.
         /// </summary>
-        public ITextTemplateSyntaxExpression? Parent { get; }
+        public ITextTemplateSyntaxExpression? Parent { get; set; }
         /// <summary>
         /// Any child expressions that are part of the current expression. Can be used to traverse the syntax tree.
         /// </summary>
-        public IReadOnlyList<ITextTemplateSyntaxExpression> Children { get; }
+        public IReadOnlyList<ITextTemplateSyntaxExpression>? Children { get; }
     }
 }

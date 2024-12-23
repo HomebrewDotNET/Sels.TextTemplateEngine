@@ -1,6 +1,6 @@
 ﻿using Sels.Core;
-using Sels.TextTemplateEngine.Templates.Compilation;
-using Sels.TextTemplateEngine.Templates.Compilation.Tokens;
+using Sels.TextTemplateEngine.Templates.Compilation.Lexing;
+using Sels.TextTemplateEngine.Templates.Compilation.Lexing.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,6 +33,6 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
 
         /// <inheritdoc/>
         protected override Task<ITextTemplateToken> GenerateAsync(ITextTemplateLexerContext context, int bufferMatchPosition, CancellationToken cancellationToken)
-        => Task.FromResult<ITextTemplateToken>(new T() { Position = bufferMatchPosition, Line = context.Line });
+        => Task.FromResult<ITextTemplateToken>(new T() { Position = new TokenPosition() { Line = context.Line, LineIndex = context.BufferLineIndex, Index = bufferMatchPosition } });
     }
 }

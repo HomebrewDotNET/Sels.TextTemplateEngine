@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sels.TextTemplateEngine.Templates.Compilation
+namespace Sels.TextTemplateEngine.Templates.Compilation.Lexing
 {
     /// <summary>
     /// Base class for creating a <see cref="ITextTemplateTokenLexer"/> that creates tokens from multiple sequences of characters.
@@ -47,9 +47,9 @@ namespace Sels.TextTemplateEngine.Templates.Compilation
             string? lastMatchingSequence = null;
             for (int i = 0; i < context.Buffer.Count; i++)
             {
-                foreach(var sequence in sequences)
+                foreach (var sequence in sequences)
                 {
-                    for (int j = 0; j < sequence.Length && (i + j) < context.Buffer.Count; j++)
+                    for (int j = 0; j < sequence.Length && i + j < context.Buffer.Count; j++)
                     {
                         var bufferCharacter = context.Buffer.ElementAt(i + j);
                         var sequenceCharacter = sequence[j];
@@ -57,12 +57,12 @@ namespace Sels.TextTemplateEngine.Templates.Compilation
                         if (!isMatch) break;
                         else if (j == sequence.Length - 1)
                         {
-                            return (TokenLexerResponse.CanLex, context.BufferPosition + i, sequence); // Last token and still match so full sequence matched
+                            return (TokenLexerResponse.CanLex, context.BufferIndex + i, sequence); // Last token and still match so full sequence matched
                         }
                         lastMatchingSequence = sequence;
                     }
                 }
-                
+
             }
             if (isMatch) return (TokenLexerResponse.Interested, default, lastMatchingSequence);
             return (TokenLexerResponse.NotInterested, default, null);

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sels.TextTemplateEngine.Templates.Compilation
+namespace Sels.TextTemplateEngine.Templates.Compilation.Lexing
 {
     /// <summary>
     /// Base class for creating a <see cref="ITextTemplateTokenLexer"/> that creates token from a sequence of characters.
@@ -17,9 +17,9 @@ namespace Sels.TextTemplateEngine.Templates.Compilation
         /// The string that represents the sequence of characters that this lexer tokenizes.
         /// </summary>
         public abstract string Sequence { get; }
-        
+
         /// <inheritdoc/>
-        public override string[] Sequences => new string[]{ Sequence };
+        public override string[] Sequences => new string[] { Sequence };
         /// <inheritdoc/>
         protected override Task<ITextTemplateToken> GenerateAsync(ITextTemplateLexerContext context, int bufferMatchPosition, string matchingSequence, CancellationToken cancellationToken)
          => GenerateAsync(context, bufferMatchPosition, cancellationToken);

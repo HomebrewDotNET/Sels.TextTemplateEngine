@@ -24,5 +24,12 @@ namespace Sels.TextTemplateEngine.Compilation
         {
             Parser = Guard.IsNotNull(parser);
         }
+
+        /// <inheritdoc cref="UnexceptedEndOfParserBufferException"/>
+        /// <param name="parser"><inheritdoc cref="Parser"/></param>
+        public UnexceptedEndOfParserBufferException(ITextTemplateExpressionParser parser, TokenPosition startPosition) : base($"Unexpected end of buffer reached when parser <{parser}> which started reading at <{startPosition}> was creating expression")
+        {
+            Parser = Guard.IsNotNull(parser);
+        }
     }
 }

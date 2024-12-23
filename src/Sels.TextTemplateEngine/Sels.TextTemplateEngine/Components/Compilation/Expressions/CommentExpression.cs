@@ -19,11 +19,11 @@ namespace Sels.TextTemplateEngine.Compilation.Expressions
         /// <inheritdoc/>
         public string Type => TextTemplateEngineConstants.Compilation.ExpressionTypes.Comment;
         /// <inheritdoc/>
-        public IReadOnlyCollection<ITextTemplateToken> Tokens { get; }
+        public IEnumerable<ITextTemplateToken> Tokens { get; }
         /// <inheritdoc/>
-        ITextTemplateSyntaxExpression? ITextTemplateSyntaxExpression.Parent => null;
+        ITextTemplateSyntaxExpression? ITextTemplateSyntaxExpression.Parent { get; set; }
         /// <inheritdoc/>
-        IReadOnlyList<ITextTemplateSyntaxExpression> ITextTemplateSyntaxExpression.Children => [];
+        IReadOnlyList<ITextTemplateSyntaxExpression>? ITextTemplateSyntaxExpression.Children => null;
 
         /// <inheritdoc cref="CommentExpression"/>
         /// <param name="tokens"><inheritdoc cref="Tokens"/></param>

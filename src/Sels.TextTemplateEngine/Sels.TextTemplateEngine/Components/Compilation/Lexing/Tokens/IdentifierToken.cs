@@ -18,13 +18,13 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         /// </summary>
         public char[] Identifier { get; }
         /// <inheritdoc/>
-        public int Position { get; init; }
-        /// <inheritdoc/>
         public int Length => Identifier.Length;
         /// <inheritdoc/>
-        public int Line { get; init; }
-        /// <inheritdoc/>
         public string Type => TextTemplateEngineConstants.Compilation.TokenTypes.Identifier;
+        /// <inheritdoc/>
+        public TokenPosition Position { get; init; }
+        /// <inheritdoc/>
+        IEnumerable<char> ITextTemplateToken.TextValue => Identifier;
 
         /// <inheritdoc cref="IdentifierToken"/>
         /// <param name="identifier"><inheritdoc cref="Identifier"/></param>

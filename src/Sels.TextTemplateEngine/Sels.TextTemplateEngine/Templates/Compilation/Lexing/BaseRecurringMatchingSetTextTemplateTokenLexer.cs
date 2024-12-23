@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sels.TextTemplateEngine.Templates.Compilation
+namespace Sels.TextTemplateEngine.Templates.Compilation.Lexing
 {
     /// <summary>
     /// Base class for creating a <see cref="ITextTemplateTokenLexer"/> that creates tokens from a recurring sequence of characters.
@@ -43,7 +43,7 @@ namespace Sels.TextTemplateEngine.Templates.Compilation
                         }
                     }
 
-                    return await GenerateAsync(context, context.BufferPosition + i, whitespaceCharacters.ToArray(), cancellationToken).ConfigureAwait(false);
+                    return await GenerateAsync(context, context.BufferIndex + i, whitespaceCharacters.ToArray(), cancellationToken).ConfigureAwait(false);
                 }
 
             }
@@ -60,8 +60,8 @@ namespace Sels.TextTemplateEngine.Templates.Compilation
             {
                 if (await IsMatch(context.Buffer.ElementAt(i)).ConfigureAwait(false))
                 {
-                    int startPosition = i+1;
-                    while(startPosition < context.Buffer.Count)
+                    int startPosition = i + 1;
+                    while (startPosition < context.Buffer.Count)
                     {
                         if (await IsMatch(context.Buffer.ElementAt(startPosition)).ConfigureAwait(false))
                         {
@@ -73,7 +73,7 @@ namespace Sels.TextTemplateEngine.Templates.Compilation
                         }
                     }
 
-                    if(context.IsLastCharacter) // If we are at the end of the stream we can lex
+                    if (context.IsLastCharacter) // If we are at the end of the stream we can lex
                     {
                         return TokenLexerResponse.CanLex;
                     }

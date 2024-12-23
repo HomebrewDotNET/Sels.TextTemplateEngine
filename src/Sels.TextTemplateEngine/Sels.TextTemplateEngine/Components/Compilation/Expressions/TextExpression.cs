@@ -15,11 +15,11 @@ namespace Sels.TextTemplateEngine.Compilation.Expressions
         /// <inheritdoc/>
         string ITextTemplateSyntaxExpression.Type => TextTemplateEngineConstants.Compilation.ExpressionTypes.Text;
         /// <inheritdoc/>
-        public IReadOnlyCollection<ITextTemplateToken> Tokens { get; }
+        public IEnumerable<ITextTemplateToken> Tokens { get; }
         /// <inheritdoc/>
-        public ITextTemplateSyntaxExpression? Parent { get; }
+        public ITextTemplateSyntaxExpression? Parent { get; set; }
         /// <inheritdoc/>
-        public IReadOnlyList<ITextTemplateSyntaxExpression> Children { get; } = [];
+        public IReadOnlyList<ITextTemplateSyntaxExpression>? Children => null;
 
         /// <inheritdoc cref="TextExpression"/>
         /// <param name="tokens"><inheritdoc cref="Tokens"/></param>

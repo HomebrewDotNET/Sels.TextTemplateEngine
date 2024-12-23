@@ -34,17 +34,25 @@ namespace Sels.TextTemplateEngine.Compilation
         /// </summary>
         public Stream Source { get; }
         /// <summary>
-        /// The current position of <see cref="CurrentCharacter"/>.
+        /// The current index of <see cref="CurrentCharacter"/>.
         /// </summary>
-        public int Position { get; }
+        public int Index { get; }
         /// <summary>
-        /// The position of the first character in <see cref="Buffer"/>.
+        /// The index of the first character in <see cref="Buffer"/>.
         /// </summary>
-        public int BufferPosition => Position - Buffer.Count+1;
+        public int BufferIndex => Index - Buffer.Count+1;
         /// <summary>
         /// The current line in the stream.
         /// </summary>
         public int Line { get; }
+        /// <summary>
+        /// The current index of <see cref="CurrentCharacter"/> in <see cref="Line"/>.
+        /// </summary>
+        public int LineIndex { get; }
+        /// <summary>
+        /// The index of the first character in <see cref="Buffer"/> in <see cref="Line"/>.
+        /// </summary>
+        public int BufferLineIndex => LineIndex - Buffer.Count + 1;
         /// <summary>
         /// The current character buffer that hasn't been lexed yet.
         /// </summary>

@@ -70,11 +70,12 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
                                 await foreach (var token in TryLexAsync(context, cancellationToken).ConfigureAwait(false))
                                 {
                                     lexCurrentBuffer = true;
-                                    _logger.Log($"Token <{token}> of length <{token.Length}> found at position <{token.Position}> on line <{token.Line}>");
+                                    _logger.Log($"Token <{token}> of length <{token.Length}> found at <{token.Position}>");
                                     yield return token;
                                 }
                             }
-                            context.Position++;
+                            context.Index++;
+                            context.LineIndex++;
                         }
 
                         if (!atEndOfStream) charactersRead = await streamReader.ReadAsync(buffer, streamPosition, buffer.Length).ConfigureAwait(false);
@@ -83,8 +84,8 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
 
                     if (context.Buffer.Count > 0)
                     {
-                        _logger.Log($"End of stream reached with a buffer of length <{context.Buffer.Count}>. Generating text token at position <{interfaceContext.BufferPosition}> on line <{context.Line}>");
-                        yield return new TextTemplateTextToken(context.Buffer) { Position = interfaceContext.BufferPosition, Line = context.Line };
+                        _logger.Log($"End of stream reached with a buffer of length <{context.Buffer.Count}>. Generating text token at position <{interfaceContext.BufferIndex}> on line <{context.Line}>");
+                        yield return new TextTemplateTextToken(context.Buffer) { Position = new TokenPosition() { Index = interfaceContext.BufferIndex, Line = context.Line, LineIndex = interfaceContext.BufferLineIndex } };
                     }
                 }
             }
@@ -115,15 +116,15 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
                     _logger.Debug($"Token lexer <{tokenLexer}> generated token <{token}> from <{token.Length}> characters from position <{token.Position}>");
 
                     // Validate that token is not longer than the current position
-                    if (token.Position + token.Length > context.Position + 1) throw new InvalidOperationException($"Token <{token}> is longer than the current position <{context.Position}>");
+                    if (token.Position.Index + token.Length > context.Index + 1) throw new InvalidOperationException($"Token <{token}> is longer than the current position <{context.Index}>");
                     // Validate token is not created before the buffer
-                    if (token.Position < interfaceContext.BufferPosition) throw new InvalidOperationException($"Token <{token}> is created before the buffer position <{interfaceContext.BufferPosition}>");
+                    if (token.Position.Index < interfaceContext.BufferIndex) throw new InvalidOperationException($"Token <{token}> is created before the buffer position <{interfaceContext.BufferIndex}>");
 
                     // Check if we need to trim buffer before token
-                    var bufferBeforeToken = token.Position - interfaceContext.BufferPosition;
+                    var bufferBeforeToken = token.Position.Index - interfaceContext.BufferIndex;
                     if (bufferBeforeToken > 0)
                     {
-                        _logger.Debug($"Token was generated starting from position <{token.Position}> while buffer is at position <{interfaceContext.BufferPosition}>. Trying to lex remaining buffer before token");
+                        _logger.Debug($"Token was generated at <{token.Position}> while buffer is at position <{interfaceContext.BufferIndex}>. Trying to lex remaining buffer before token");
                         var remainingBuffer = context.Buffer.Take(bufferBeforeToken).ToList();
                         var remainingBufferContext = new TextTemplateLexerContext(context, remainingBuffer) { IsLastCharacter = true };
                         context.Buffer.RemoveRange(0, bufferBeforeToken);
@@ -132,9 +133,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
                             yield return bufferToken;
                         }
 
-                        if (remainingBufferContext.Buffer.HasValue()) yield return new TextTemplateTextToken(remainingBufferContext.Buffer) { Position = ((ITextTemplateLexerContext)remainingBufferContext).BufferPosition, Line = remainingBufferContext.Line };
-                        // Set line count if increased
-                        context.Line = remainingBufferContext.Line > context.Line ? remainingBufferContext.Line : context.Line;
+                        if (remainingBufferContext.Buffer.HasValue()) yield return new TextTemplateTextToken(remainingBufferContext.Buffer) { Position = new TokenPosition() { Index = ((ITextTemplateLexerContext)remainingBufferContext).BufferIndex, Line = remainingBufferContext.Line, LineIndex = ((ITextTemplateLexerContext)remainingBufferContext).BufferLineIndex } };
                     }
                     // Remove token from remaining buffer
                     context.Buffer.RemoveRange(0, token.Length);
@@ -144,6 +143,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
                     {
                         _logger.Debug($"Token <{token}> is a new line. Increasing line count");
                         context.Line++;
+                        context.LineIndex = 0;
                     }
 
                     yield return token;
@@ -160,12 +160,13 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
         private class TextTemplateLexerContext : ITextTemplateLexerContext
         {
             public Stream Source { get; }
-            public int Position { get; set; } = 0;
+            public int Index { get; set; } = 0;
             public int Line { get; set; } = 1;
             public List<char> Buffer { get; } = new List<char>();
             IReadOnlyList<char> ITextTemplateLexerContext.Buffer => Buffer;
             public IReadOnlyList<ITextTemplateTokenLexer> TokenLexers { get; }
             public bool IsLastCharacter { get; set; }
+            public int LineIndex { get; set; } = 0;
 
             public TextTemplateLexerContext(Stream source, IEnumerable<ITextTemplateTokenLexer> lexers)
             {
@@ -178,8 +179,9 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
                 context = Guard.IsNotNull(context);
                 newBuffer = Guard.IsNotNull(newBuffer);
                 Source = context.Source;
-                Position = context.Position;
+                Index = context.Index;
                 Line = context.Line;
+                LineIndex = context.LineIndex;
                 Buffer = newBuffer;
                 TokenLexers = context.TokenLexers;
                 IsLastCharacter = context.IsLastCharacter;

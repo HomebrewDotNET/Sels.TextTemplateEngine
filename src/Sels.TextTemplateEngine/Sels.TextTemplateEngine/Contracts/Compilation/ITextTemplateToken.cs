@@ -18,16 +18,16 @@ namespace Sels.TextTemplateEngine.Compilation
         public string Type { get; }
 
         /// <summary>
-        /// The index of the token in source stream.
+        /// Contains information about the position of the token in the source stream.
         /// </summary>
-        public int Position { get; }
+        public TokenPosition Position { get; }
+        /// <summary>
+        /// Enumerates the characters that represents the token in text form. Doesn't have to match the characters in the source stream for example when dealing with escape characters.
+        /// </summary>
+        public IEnumerable<char> TextValue { get; }
         /// <summary>
         /// The length of the characters from the source string that was used to create the token.
         /// </summary>
         public int Length { get; }
-        /// <summary>
-        /// The line of the token in the source stream.
-        /// </summary>
-        public int Line { get; }
     }
 }

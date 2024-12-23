@@ -1,6 +1,6 @@
 ﻿using Sels.Core;
-using Sels.TextTemplateEngine.Templates.Compilation;
-using Sels.TextTemplateEngine.Templates.Compilation.Tokens;
+using Sels.TextTemplateEngine.Templates.Compilation.Lexing;
+using Sels.TextTemplateEngine.Templates.Compilation.Lexing.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,7 +39,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         // Statics
         private static readonly char[] _newLineCharacters = Environment.NewLine.ToCharArray();
         /// <inheritdoc cref="Priority"/>
-        public static byte LexerPriority => 10;
+        public static byte LexerPriority => 2;
 
         // Properties
         /// <inheritdoc/>
@@ -48,6 +48,6 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         public override byte Priority => LexerPriority;
         /// <inheritdoc/>
         protected override Task<ITextTemplateToken> GenerateAsync(ITextTemplateLexerContext context, int bufferMatchPosition, CancellationToken cancellationToken)
-        => Task.FromResult<ITextTemplateToken>(new NewLineTextTemplateToken(_newLineCharacters) { Position = bufferMatchPosition, Line = context.Line });
+        => Task.FromResult<ITextTemplateToken>(new NewLineTextTemplateToken(_newLineCharacters) { Position = new TokenPosition { Index = bufferMatchPosition, Line = context.Line, LineIndex = context.BufferLineIndex } });
     }
 }

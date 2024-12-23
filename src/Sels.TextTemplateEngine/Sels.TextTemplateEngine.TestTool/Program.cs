@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Sels.Core;
+using Sels.Core.Extensions;
 using Sels.Core.Extensions.Logging;
 using Sels.Core.Extensions.Reflection;
 using Sels.TextTemplateEngine.Compilation;
@@ -35,7 +36,7 @@ namespace Sels.TextTemplateEngine.TestTool
 
             await foreach(var token in lexer.LexAsync(provider.GetServices<ITextTemplateTokenLexer>(), file.OpenRead(), cancellationToken: CancellationToken.None))
             {
-                logger.Log($"Token <{token}> of length <{token.Length}> found at position <{token.Position}> on line <{token.Line}>");
+                logger.Log($"Token <{token.Type}> of length <{token.Length}> found at <{token.Position}>");
             }
         }
 
@@ -59,17 +60,7 @@ namespace Sels.TextTemplateEngine.TestTool
             var tokens = lexer.LexAsync(provider.GetServices<ITextTemplateTokenLexer>(), file.OpenRead(), cancellationToken: CancellationToken.None);
             var syntaxTree = await parser.ParseAsync(provider.GetServices<ITextTemplateExpressionParser>(), tokens, CancellationToken.None);
             await Helper.Async.Sleep(1000).ConfigureAwait(false);
-            WriteExpression(syntaxTree);
-        }
-
-        private static void WriteExpression(ITextTemplateSyntaxExpression expression, int depth = 0)
-        {
-            var indent = new string(' ', depth * 2);
-            Console.WriteLine($"{indent}{expression.GetType().GetDisplayName(false)}");
-            foreach (var child in expression.Children)
-            {
-                WriteExpression(child, depth + 1);
-            }
+            Console.WriteLine(syntaxTree.ToString(x => x.GetType().GetDisplayName(false)));
         }
     }
 }

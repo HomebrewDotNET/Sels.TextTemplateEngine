@@ -1,6 +1,6 @@
 ﻿using Sels.Core;
 using Sels.TextTemplateEngine.Templates.Compilation;
-using Sels.TextTemplateEngine.Templates.Compilation.Tokens;
+using Sels.TextTemplateEngine.Templates.Compilation.Lexing.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Linq;

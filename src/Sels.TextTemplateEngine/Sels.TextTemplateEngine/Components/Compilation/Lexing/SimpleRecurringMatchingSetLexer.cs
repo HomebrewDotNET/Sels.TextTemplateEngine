@@ -1,5 +1,5 @@
 ﻿using Sels.Core;
-using Sels.TextTemplateEngine.Templates.Compilation;
+using Sels.TextTemplateEngine.Templates.Compilation.Lexing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
