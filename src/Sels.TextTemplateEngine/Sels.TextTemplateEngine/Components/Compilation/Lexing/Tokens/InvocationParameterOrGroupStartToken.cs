@@ -10,7 +10,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
     /// <summary>
     /// Token that represents the start of a method named parameter or group.
     /// </summary>
-    public class InvocationParameterOrGroupStartToken : BaseSequenceToken
+    public class InvocationParameterOrGroupStartToken : BaseSequenceToken, ITextTemplateTypedToken
     {
         // Statics
         private static char[] _characters = TextTemplateEngineConstants.Compilation.Syntax.InvocationParameterOrGroupStart.ToCharArray();
@@ -21,6 +21,8 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         /// </summary>
         public override IReadOnlyList<char> Characters => _characters;
         /// <inheritdoc/>
-        public override string Type => TextTemplateEngineConstants.Compilation.TokenTypes.InvocationParameterOrGroupStart;
+        public static string TokenType => TextTemplateEngineConstants.Compilation.TokenTypes.InvocationParameterOrGroupStart;
+        /// <inheritdoc/>
+        public override string Type => TokenType;
     }
 }

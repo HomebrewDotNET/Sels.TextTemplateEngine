@@ -10,7 +10,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
     /// <summary>
     /// Token that represents the end of a method parameter or group.
     /// </summary>
-    public class InvocationParameterOrGroupEndToken : BaseSequenceToken
+    public class InvocationParameterOrGroupEndToken : BaseSequenceToken, ITextTemplateTypedToken
     {
         // Statics
         private static char[] _characters = TextTemplateEngineConstants.Compilation.Syntax.InvocationParameterOrGroupEnd.ToCharArray();
@@ -20,6 +20,8 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         /// </summary>
         public override IReadOnlyList<char> Characters => _characters;
         /// <inheritdoc/>
-        public override string Type => TextTemplateEngineConstants.Compilation.TokenTypes.InvocationParameterOrGroupEnd;
+        public static string TokenType => TextTemplateEngineConstants.Compilation.TokenTypes.InvocationParameterOrGroupEnd;
+        /// <inheritdoc/>
+        public override string Type => TokenType;
     }
 }

@@ -34,7 +34,7 @@ namespace Sels.TextTemplateEngine.TestTool
             var file = new FileInfo(filePath);
             logger.Log($"Lexing file <{file}> into tokens");
 
-            await foreach(var token in lexer.LexAsync(provider.GetServices<ITextTemplateTokenLexer>(), file.OpenRead(), cancellationToken: CancellationToken.None))
+            await foreach(var token in lexer.LexAsync("", x => { }, file.OpenRead(), cancellationToken: CancellationToken.None))
             {
                 logger.Log($"Token <{token.Type}> of length <{token.Length}> found at <{token.Position}>");
             }
@@ -57,8 +57,8 @@ namespace Sels.TextTemplateEngine.TestTool
             var parser = provider.GetRequiredService<ITextTemplateParser>();
             var file = new FileInfo(filePath);
             logger.Log($"Lexing file <{file}> into tokens");
-            var tokens = lexer.LexAsync(provider.GetServices<ITextTemplateTokenLexer>(), file.OpenRead(), cancellationToken: CancellationToken.None);
-            var syntaxTree = await parser.ParseAsync(provider.GetServices<ITextTemplateExpressionParser>(), tokens, CancellationToken.None);
+            var tokens = lexer.LexAsync("", x => { }, file.OpenRead(), cancellationToken: CancellationToken.None);
+            var syntaxTree = await parser.ParseAsync("", x => { }, tokens, CancellationToken.None);
             await Helper.Async.Sleep(1000).ConfigureAwait(false);
             Console.WriteLine(syntaxTree.ToString(x => x.GetType().GetDisplayName(false)));
         }

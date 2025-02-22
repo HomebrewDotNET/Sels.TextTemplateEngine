@@ -12,7 +12,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
     /// <summary>
     /// Token that represents a whitespace token.
     /// </summary>
-    public class WhitespaceTextTemplateToken : BaseSequenceToken
+    public class WhitespaceTextTemplateToken : BaseSequenceToken, ITextTemplateTypedToken
     {
         // Properties
         /// <summary>
@@ -20,7 +20,9 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         /// </summary>
         public override IReadOnlyList<char> Characters { get; }
         /// <inheritdoc/>
-        public override string Type => TextTemplateEngineConstants.Compilation.TokenTypes.Text;
+        public static string TokenType => TextTemplateEngineConstants.Compilation.TokenTypes.Text;
+        /// <inheritdoc/>
+        public override string Type => TokenType;
 
         /// <inheritdoc cref="WhitespaceTextTemplateToken"/>
         /// <param name="characters"><inheritdoc cref="Characters"/></param>

@@ -31,6 +31,15 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing.Parsers
         ];
         /// <inheritdoc/>
         public override int? MatchWhitespaceAfterIndex => 1;
+        /// <inheritdoc/>
+        public override IEnumerable<string> Parses { 
+            get
+            {
+                yield return TextTemplateEngineConstants.Compilation.ExpressionTypes.Invocation;
+                yield return TextTemplateEngineConstants.Compilation.ExpressionTypes.NamedInvocation;
+                yield return TextTemplateEngineConstants.Compilation.ExpressionTypes.PositionalInvocation;
+            } 
+        }
 
         /// <inheritdoc cref="InvocationExpressionParser"/>
         /// <param name="priority"><inheritdoc cref="BaseRecurringMatchingSetTextTemplateParser.Priority"/></param>
@@ -331,7 +340,7 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing.Parsers
                 {
                     lastWasParsed = false;
                     var (response, parser) = await argumentScope.AreInterestedInAsync(cancellationToken).ConfigureAwait(false);
-                    if (response == ExpressionParserResponse.CanParse)
+                    if (response == SyntaxExpressionParserResponse.CanParse)
                     {
                         await foreach (var expression in argumentScope.ParseAsync(parser!, cancellationToken))
                         {
@@ -393,7 +402,7 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing.Parsers
             {
                 var (response, parser) = await subScope.AreInterestedInAsync(cancellationToken).ConfigureAwait(false);
 
-                if(response == ExpressionParserResponse.CanParse)
+                if(response == SyntaxExpressionParserResponse.CanParse)
                 {
                     int consumedTokens = 0;
                     await foreach (var expression in subScope.ParseAsync(parser!, cancellationToken))

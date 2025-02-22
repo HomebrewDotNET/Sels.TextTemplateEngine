@@ -37,7 +37,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.New<CommentParser>()
                     .ConstructWith(x => new CommentParser(1))
                     .TryRegister();
-            services.New<ITextTemplateExpressionParser, CommentParser>()
+            services.New<ITextTemplateSyntaxExpressionParser, CommentParser>()
                     .Trace(x => x.Duration.OfAll)
                     .AsForwardedService()
                     .TryRegisterImplementation();
@@ -45,7 +45,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.New<AccessorExpressionParser>()
                     .ConstructWith(x => new AccessorExpressionParser(90))
                     .TryRegister();
-            services.New<ITextTemplateExpressionParser, AccessorExpressionParser>()
+            services.New<ITextTemplateSyntaxExpressionParser, AccessorExpressionParser>()
                     .Trace(x => x.Duration.OfAll)
                     .AsForwardedService()
                     .TryRegisterImplementation();
@@ -53,7 +53,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.New<InvocationExpressionParser>()
                     .ConstructWith(x => new InvocationExpressionParser(100))
                     .TryRegister();
-            services.New<ITextTemplateExpressionParser, InvocationExpressionParser>()
+            services.New<ITextTemplateSyntaxExpressionParser, InvocationExpressionParser>()
                     .Trace(x => x.Duration.OfAll)
                     .AsForwardedService()
                     .TryRegisterImplementation();

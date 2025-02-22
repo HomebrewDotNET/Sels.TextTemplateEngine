@@ -21,25 +21,29 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
     {
         // Fields
         private readonly ILogger? _logger;
+        private readonly ITextTemplateSyntaxExpressionParser[] _expressionParsers;
 
         /// <inheritdoc cref="TextTemplateParser"/>
+        /// <param name="parsers">The parsers that will parse tokens into expressions</param>
         /// <param name="logger">Optional logger for tracing</param>
-        public TextTemplateParser(ILogger<TextTemplateParser>? logger = null)
+        public TextTemplateParser(IEnumerable<ITextTemplateSyntaxExpressionParser> parsers, ILogger<TextTemplateParser>? logger = null)
         {
+            _expressionParsers = Guard.IsNotNull(parsers).ToArray();
             _logger = logger;
         }
 
         /// <inheritdoc/>
-        public async Task<SyntaxTreeRootExpression> ParseAsync(IEnumerable<ITextTemplateExpressionParser> parsers, IAsyncEnumerable<ITextTemplateToken> tokens, CancellationToken cancellationToken = default)
+        public async Task<AbstractSyntaxTreeExpression> ParseAsync(string compilerProcess, Action<ITextTemplateParserConfigurationBuilder> configure, IAsyncEnumerable<ITextTemplateToken> tokens, CancellationToken cancellationToken = default)
         {
+            compilerProcess = Guard.IsNotNull(compilerProcess);
             tokens = Guard.IsNotNull(tokens);
-            var expressionParsers = Guard.IsNotNull(parsers).Where(x => x != null).OrderBy(x => x.Priority).ToArray();
 
-            _logger.Log($"Preparing to parse token into syntax tree using <{expressionParsers.Length}> expression parsers");
+            var settings = new TextTemplateParserSettings(_expressionParsers, configure);
+            _logger.Log($"Preparing to parse token into syntax tree using <{settings.Parsers.Count}> expression parsers");
 
-            await using var context = new RootContext(expressionParsers, tokens.GetAsyncEnumerator(cancellationToken), _logger);
+            await using var context = new RootContext(settings, tokens.GetAsyncEnumerator(cancellationToken), _logger) { CompilerProcess = compilerProcess};
             var interfactContext = (ITextTemplateParserContext)context;
-            _logger.Debug($"Created root context. Starting parse using <{expressionParsers.Length}> expression parsers");
+            _logger.Debug($"Created root context. Starting parse using <{settings.Parsers.Count}> expression parsers");
             using var tracer = _logger.TraceAction($"Create syntax tree with <{context.Parsers.Count}> parsers");
             while (await context.TryReadNextAsync(cancellationToken).ConfigureAwait(false) != null)
             {
@@ -47,16 +51,16 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
 
                 var (response, parser) = await context.AreInterestedInAsync(cancellationToken).ConfigureAwait(false);
 
-                if (response == ExpressionParserResponse.CanParse)
+                if (response == SyntaxExpressionParserResponse.CanParse)
                 {
                     _logger.Debug($"Parser <{parser}> can parse token <{interfactContext.CurrentToken}>");
                     await foreach (var expression in context.ParseAsync(parser!, cancellationToken))
                     {
                         _logger.Log($"Adding expression <{expression}> created by <{parser}> to root syntax tree");
-                        context.Root.Expressions.Add(expression);
+                        context.Ast.Expressions.Add(expression);
                     }
                 }
-                else if (response == ExpressionParserResponse.Interested)
+                else if (response == SyntaxExpressionParserResponse.Interested)
                 {
                     _logger.Debug($"Parser <{parser}> is interested in token <{interfactContext.CurrentToken}> but can't parse it yet");
                 }
@@ -75,13 +79,13 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                 foreach (var expression in expressions)
                 {
                     _logger.Log($"Adding expression <{expression}> to the end of the root syntax tree");
-                    context.Root.Expressions.Add(expression);
+                    context.Ast.Expressions.Add(expression);
                 }
 
                 context.Buffer.Clear();
             }
 
-            return context.Root;
+            return context.Ast;
         }
 
         private class RootContext : SubContext, IAsyncDisposable
@@ -92,7 +96,7 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
             // Properties
             protected override AsyncFunc<CancellationToken, ITextTemplateToken?> TryReadNext => TryReadNextAsync;
 
-            public RootContext(IEnumerable<ITextTemplateExpressionParser> parsers, IAsyncEnumerator<ITextTemplateToken> tokenEnumerator, ILogger? logger) : base(parsers, logger)
+            public RootContext(TextTemplateParserSettings settings, IAsyncEnumerator<ITextTemplateToken> tokenEnumerator, ILogger? logger) : base(settings, logger)
             {
                 _tokenEnumerator = Guard.IsNotNull(tokenEnumerator);
                 ParserScope = TextTemplateEngineConstants.Compilation.ParserScopes.TemplateBody;
@@ -143,27 +147,30 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
 
             // Properties
             /// <inheritdoc/>
+            public required string CompilerProcess { get; init; }
+            /// <inheritdoc/>
             public List<ITextTemplateToken> Buffer { get; }
             /// <inheritdoc/>
             public bool IsLastToken { get; protected set; }
             /// <inheritdoc/>
-            public IReadOnlyList<ITextTemplateExpressionParser> Parsers { get; }
+            public IReadOnlyList<ITextTemplateSyntaxExpressionParser> Parsers => Settings.Parsers;
             /// <inheritdoc/>
-            public SyntaxTreeRootExpression Root { get; }
+            public AbstractSyntaxTreeExpression Ast { get; }
             /// <inheritdoc/>
-            public ITextTemplateExpressionParser? ParentParser { get; init; }
+            public ITextTemplateSyntaxExpressionParser? ParentParser { get; init; }
             /// <inheritdoc/>
             public string? ParserScope { get; init; }
             /// <inheritdoc/>
             public ITextTemplateParserContext? ParentContext { get; protected set; }
             protected virtual AsyncFunc<CancellationToken, ITextTemplateToken?> TryReadNext => Guard.IsNotNull(_tryReadNext);
+            protected TextTemplateParserSettings Settings { get; }
 
-            public SubContext(AsyncFunc<CancellationToken, ITextTemplateToken?> tryReadNext, ITextTemplateParserContext parentContext, int offset, int? readLimit, bool canRead, bool consumeTokens, Action? disposeAction, ILogger? logger)
+            public SubContext(AsyncFunc<CancellationToken, ITextTemplateToken?> tryReadNext, TextTemplateParserSettings settings, ITextTemplateParserContext parentContext, int offset, int? readLimit, bool canRead, bool consumeTokens, Action? disposeAction, ILogger? logger)
             {
                 _tryReadNext = Guard.IsNotNull(tryReadNext);
+                Settings = Guard.IsNotNull(settings);
                 ParentContext = Guard.IsNotNull(parentContext);
-                Root = ParentContext.Root;
-                Parsers = ParentContext.Parsers;
+                Ast = ParentContext.Ast;
                 if (!canRead) IsLastToken = true;
                 _offset = Guard.IsLargerOrEqual(offset, 0);
                 Buffer = ParentContext.Buffer.Skip(offset).Take(readLimit.HasValue ? readLimit.Value : ParentContext.Buffer.Count).ToList();
@@ -174,17 +181,17 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                 _logger = logger;
             }
 
-            protected SubContext(IEnumerable<ITextTemplateExpressionParser> parsers, ILogger? logger)
+            protected SubContext(TextTemplateParserSettings settings, ILogger? logger)
             {
-                Parsers = Guard.IsNotNull(parsers).ToList();
+                Settings = Guard.IsNotNull(settings);
                 Buffer = new List<ITextTemplateToken>();
-                Root = new SyntaxTreeRootExpression();
+                Ast = new AbstractSyntaxTreeExpression();
                 ParentContext = this;
                 _logger = logger;
             }
 
             /// <inheritdoc/>
-            public async Task<(ExpressionParserResponse Response, ITextTemplateExpressionParser? Parser)> AreInterestedInAsync(CancellationToken cancellationToken = default)
+            public async Task<(SyntaxExpressionParserResponse Response, ITextTemplateSyntaxExpressionParser? Parser)> AreInterestedInAsync(CancellationToken cancellationToken = default)
             {
                 _logger.Debug($"Checking if any of the <{Parsers.Count}> parsers is interested in the current buffer of size <{Buffer.Count}>");
                 foreach (var parser in Parsers)
@@ -192,23 +199,23 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                     var response = await parser.IsInterestedAsync(this, cancellationToken).ConfigureAwait(false);
                     switch (response)
                     {
-                        case ExpressionParserResponse.CanParse:
+                        case SyntaxExpressionParserResponse.CanParse:
                             _logger.Debug($"Parser <{parser}> can parse the current buffer");
                             return (response, parser);
-                        case ExpressionParserResponse.Interested:
+                        case SyntaxExpressionParserResponse.Interested:
                             _logger.Debug($"Parser <{parser}> is interested in the current buffer");
                             return (response, parser);
-                        case ExpressionParserResponse.NotInterested:
+                        case SyntaxExpressionParserResponse.NotInterested:
                             _logger.Debug($"Parser <{parser}> is not interested in the current buffer");
                             break;
                         default: throw new NotSupportedException($"Response <{response}> from parser <{parser}> is not supported");
                     }
                 }
 
-                return (ExpressionParserResponse.NotInterested, null);
+                return (SyntaxExpressionParserResponse.NotInterested, null);
             }
             /// <inheritdoc/>
-            public async IAsyncEnumerable<ITextTemplateSyntaxExpression> ParseAsync(ITextTemplateExpressionParser parser, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+            public async IAsyncEnumerable<ITextTemplateSyntaxExpression> ParseAsync(ITextTemplateSyntaxExpressionParser parser, [EnumeratorCancellation] CancellationToken cancellationToken = default)
             {
                 parser = Guard.IsNotNull(parser);
                 if (_subScopeActive) throw new InvalidOperationException("Sub scope active. Parse not allowed");
@@ -234,7 +241,7 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                     _logger.Debug($"Parsing <{firstTokenIndex}> token(s) before expression <{expression}>");
                     using var subContext = CreateScope(parser, ParserScope, 0, bufferBeforeExpression.Count, false);
                     var (response, subParser) = await subContext.AreInterestedInAsync(cancellationToken);
-                    if (response == ExpressionParserResponse.CanParse)
+                    if (response == SyntaxExpressionParserResponse.CanParse)
                     {
                         await foreach (var subExpression in subContext.ParseAsync(subParser!, cancellationToken))
                         {
@@ -251,10 +258,12 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                 foreach (var subExpression in expressions)
                 {
                     subExpression.Tokens.Execute(x => Guard.Is(Buffer.Remove(x), x => true));
-                    yield return subExpression;
+                    var interceptedSubExpression = await InterceptAsync(subExpression, cancellationToken).ConfigureAwait(false);
+                    if (interceptedSubExpression != null) yield return subExpression;
                 }
                 expression.Tokens.Execute(x => Guard.Is(Buffer.Remove(x), x => true));
-                yield return expression;
+                var interceptedExpression = await InterceptAsync(expression, cancellationToken).ConfigureAwait(false);
+                if (interceptedExpression != null) yield return expression;
             }
 
             public async Task FlushAsync(List<ITextTemplateSyntaxExpression> expressions, IEnumerable<ITextTemplateToken> tokens, CancellationToken cancellationToken = default)
@@ -287,8 +296,36 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                 }
             }
 
+            /// <summary>
+            /// Intercepts <paramref name="expression"/> using all interceptors in <see cref="Settings.Interceptors"/> before it is returned.
+            /// </summary>
+            /// <param name="expression">The expression being intercepted</param>
+            /// <param name="cancellationToken">Optional token to cancel the request</param>
+            /// <returns>The (new) expression post interception or null if consumed</returns>
+            protected async Task<ITextTemplateSyntaxExpression?> InterceptAsync(ITextTemplateSyntaxExpression expression, CancellationToken cancellationToken)
+            {
+                expression = Guard.IsNotNull(expression);
+                _logger.Debug($"Intercepting expression <{expression}>");
+                foreach (var interceptor in Settings.Interceptors)
+                {
+                    var interceptedExpression = await interceptor(this, expression, cancellationToken).ConfigureAwait(false);
+
+                    if (interceptedExpression == null)
+                    {
+                        _logger.Debug($"Interceptor <{interceptor}> intercepted expression <{expression}> and returned null");
+                        return null;
+                    }
+                    else if (interceptedExpression != expression)
+                    {
+                        _logger.Debug($"Interceptor <{interceptor}> intercepted expression <{expression}> and returned <{interceptedExpression}>");
+                        expression = interceptedExpression;
+                    }
+                }
+                return expression;
+            }
+
             /// <inheritdoc/>
-            public virtual ITextTemplateParserContext CreateScope(ITextTemplateExpressionParser current, string? scope = null, int bufferOffset = 0, int? bufferLimit = null, bool canReadNext = true, bool consumeTokens = true)
+            public virtual ITextTemplateParserContext CreateScope(ITextTemplateSyntaxExpressionParser current, string? scope = null, int bufferOffset = 0, int? bufferLimit = null, bool canReadNext = true, bool consumeTokens = true)
             {
                 current = Guard.IsNotNull(current);
                 if(_subScopeActive) throw new InvalidOperationException("Sub scope already active for the current scope. Dispose the active one before starting a new one");
@@ -298,11 +335,12 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                     var token = await TryReadNext(t);
                     if(token != null) _readTokens.Add(token);
                     return token;
-                } : TryReadNext, this, bufferOffset, bufferLimit, canReadNext, consumeTokens, () =>
+                } : TryReadNext, Settings, this, bufferOffset, bufferLimit, canReadNext, consumeTokens, () =>
                 {
                     _subScopeActive = false;
                 }, _logger)
                 {
+                    CompilerProcess = CompilerProcess,
                     ParserScope = scope,
                     ParentParser = current
                 };

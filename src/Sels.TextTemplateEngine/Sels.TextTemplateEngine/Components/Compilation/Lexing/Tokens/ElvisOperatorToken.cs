@@ -11,7 +11,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
     /// <summary>
     /// Token that represents the elvis operator.
     /// </summary>
-    public class ElvisOperatorToken : BaseSequenceToken
+    public class ElvisOperatorToken : BaseSequenceToken, ITextTemplateTypedToken
     {
         // Statics
         private static char[] _characters = TextTemplateEngineConstants.Compilation.Syntax.ElvisOperator.ToCharArray();
@@ -22,6 +22,8 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         /// </summary>
         public override IReadOnlyList<char> Characters => _characters;
         /// <inheritdoc/>
-        public override string Type => TextTemplateEngineConstants.Compilation.TokenTypes.ElvisOperator;
+        public static string TokenType => TextTemplateEngineConstants.Compilation.TokenTypes.ElvisOperator;
+        /// <inheritdoc/>
+        public override string Type => TokenType;
     }
 }

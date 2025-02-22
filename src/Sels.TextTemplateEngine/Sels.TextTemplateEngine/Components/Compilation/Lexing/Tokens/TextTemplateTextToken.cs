@@ -11,7 +11,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
     /// <summary>
     /// A token that contains a series of characters.
     /// </summary>
-    public class TextTemplateTextToken : BaseSequenceToken
+    public class TextTemplateTextToken : BaseSequenceToken, ITextTemplateTypedToken
     {
         // Properties
         /// <summary>
@@ -19,7 +19,9 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         /// </summary>
         public override IReadOnlyList<char> Characters { get; }
         /// <inheritdoc/>
-        public override string Type => TextTemplateEngineConstants.Compilation.TokenTypes.Text;
+        public static string TokenType => TextTemplateEngineConstants.Compilation.TokenTypes.Text;
+        /// <inheritdoc/>
+        public override string Type => TokenType;
 
         /// <inheritdoc cref="TextTemplateTextToken"/>
         /// <param name="characters"><inheritdoc cref="Characters"/></param>

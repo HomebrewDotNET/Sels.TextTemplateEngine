@@ -12,7 +12,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
     /// <summary>
     /// Token that indicates the start of a tte expression.
     /// </summary>
-    public class AccessorStartToken : BaseSequenceToken
+    public class AccessorStartToken : BaseSequenceToken, ITextTemplateTypedToken
     {
         // Statics
         private static char[] _characters = TextTemplateEngineConstants.Compilation.Syntax.AccessorStartToken.ToCharArray();
@@ -23,6 +23,8 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         /// </summary>
         public override IReadOnlyList<char> Characters => _characters;
         /// <inheritdoc/>
-        public override string Type => TextTemplateEngineConstants.Compilation.TokenTypes.AccessorStart;
+        public static string TokenType => TextTemplateEngineConstants.Compilation.TokenTypes.AccessorStart;
+        /// <inheritdoc/>
+        public override string Type => TokenType;
     }
 }

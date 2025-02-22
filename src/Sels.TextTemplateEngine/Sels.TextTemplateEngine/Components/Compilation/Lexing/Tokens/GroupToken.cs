@@ -10,7 +10,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
     /// <summary>
     /// Token that represents the start of a group expression.
     /// </summary>
-    public class GroupToken : BaseSequenceToken
+    public class GroupToken : BaseSequenceToken, ITextTemplateTypedToken
     {
         // Statics
         private static char[] _characters = TextTemplateEngineConstants.Compilation.Syntax.ExpressionOperationGroupToken.ToCharArray();
@@ -21,6 +21,8 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         /// </summary>
         public override IReadOnlyList<char> Characters => _characters;
         /// <inheritdoc/>
-        public override string Type => TextTemplateEngineConstants.Compilation.TokenTypes.OperationGroup;
+        public static string TokenType => TextTemplateEngineConstants.Compilation.TokenTypes.OperationGroup;
+        /// <inheritdoc/>
+        public override string Type => TokenType;
     }
 }

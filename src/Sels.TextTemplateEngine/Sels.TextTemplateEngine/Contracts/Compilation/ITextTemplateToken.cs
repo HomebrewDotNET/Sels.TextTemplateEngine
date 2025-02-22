@@ -20,7 +20,7 @@ namespace Sels.TextTemplateEngine.Compilation
         /// <summary>
         /// Contains information about the position of the token in the source stream.
         /// </summary>
-        public TokenPosition Position { get; }
+        public TokenPosition Position { get; set; }
         /// <summary>
         /// Enumerates the characters that represents the token in text form. Doesn't have to match the characters in the source stream for example when dealing with escape characters.
         /// </summary>

@@ -11,7 +11,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
     /// <summary>
     /// Token that closes a tte expression.
     /// </summary>
-    public class ExpressionEndToken : BaseSequenceToken
+    public class ExpressionEndToken : BaseSequenceToken, ITextTemplateTypedToken
     {
         // Statics
         private static char[] _characters = TextTemplateEngineConstants.Compilation.Syntax.EndToken.ToCharArray();
@@ -22,6 +22,8 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         /// </summary>
         public override IReadOnlyList<char> Characters => _characters;
         /// <inheritdoc/>
-        public override string Type => TextTemplateEngineConstants.Compilation.TokenTypes.EndExpression;
+        public static string TokenType => TextTemplateEngineConstants.Compilation.TokenTypes.EndExpression;
+        /// <inheritdoc/>
+        public override string Type => TokenType;
     }
 }

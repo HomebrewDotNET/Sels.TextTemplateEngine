@@ -172,9 +172,9 @@ namespace Sels.TextTemplateEngine
             public static class SyntaxExpressionTypes
             {
                 /// <summary>
-                /// Expression that represents the root of an expression tree.
+                /// Expression that represents the root of an abstract expression tree.
                 /// </summary>
-                public const string Root = "Root";
+                public const string Ast = "Ast";
                 /// <summary>
                 /// Expression that wraps another expression.
                 /// </summary>

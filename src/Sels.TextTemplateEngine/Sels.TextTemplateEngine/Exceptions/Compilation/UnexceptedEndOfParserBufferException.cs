@@ -16,18 +16,18 @@ namespace Sels.TextTemplateEngine.Compilation
         /// <summary>
         /// The parser that reached the end of the buffer.
         /// </summary>
-        public ITextTemplateExpressionParser Parser { get; }
+        public ITextTemplateSyntaxExpressionParser Parser { get; }
 
         /// <inheritdoc cref="UnexceptedEndOfParserBufferException"/>
         /// <param name="parser"><inheritdoc cref="Parser"/></param>
-        public UnexceptedEndOfParserBufferException(ITextTemplateExpressionParser parser) : base($"Unexpected end of buffer reached when parser <{parser}> was creating expression")
+        public UnexceptedEndOfParserBufferException(ITextTemplateSyntaxExpressionParser parser) : base($"Unexpected end of buffer reached when parser <{parser}> was creating expression")
         {
             Parser = Guard.IsNotNull(parser);
         }
 
         /// <inheritdoc cref="UnexceptedEndOfParserBufferException"/>
         /// <param name="parser"><inheritdoc cref="Parser"/></param>
-        public UnexceptedEndOfParserBufferException(ITextTemplateExpressionParser parser, TokenPosition startPosition) : base($"Unexpected end of buffer reached when parser <{parser}> which started reading at <{startPosition}> was creating expression")
+        public UnexceptedEndOfParserBufferException(ITextTemplateSyntaxExpressionParser parser, TokenPosition startPosition) : base($"Unexpected end of buffer reached when parser <{parser}> which started reading at <{startPosition}> was creating expression")
         {
             Parser = Guard.IsNotNull(parser);
         }

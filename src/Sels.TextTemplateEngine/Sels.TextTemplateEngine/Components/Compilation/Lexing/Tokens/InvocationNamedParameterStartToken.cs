@@ -10,7 +10,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
     /// <summary>
     /// Token that represents the start of a method named parameter.
     /// </summary>
-    public class InvocationNamedParameterStartToken : BaseSequenceToken
+    public class InvocationNamedParameterStartToken : BaseSequenceToken, ITextTemplateTypedToken
     {
         // Statics
         private static char[] _characters = TextTemplateEngineConstants.Compilation.Syntax.InvocationNamedParameterStart.ToCharArray();
@@ -21,6 +21,8 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         /// </summary>
         public override IReadOnlyList<char> Characters => _characters;
         /// <inheritdoc/>
-        public override string Type => TextTemplateEngineConstants.Compilation.TokenTypes.InvocationNamedParameterStart;
+        public static string TokenType => TextTemplateEngineConstants.Compilation.TokenTypes.InvocationNamedParameterStart;
+        /// <inheritdoc/>
+        public override string Type => TokenType;
     }
 }

@@ -1,4 +1,6 @@
 ﻿using Sels.Core;
+using Sels.Core.Extensions.Collections;
+using Sels.Core.Extensions.Conversion;
 using Sels.TextTemplateEngine.Templates.Compilation.Lexing;
 using Sels.TextTemplateEngine.Templates.Compilation.Lexing.Tokens;
 using System;
@@ -14,13 +16,15 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
     /// </summary>
     /// <typeparam name="T">The type of token to lex</typeparam>
     public class SimpleSequenceTokenLexer<T> : BaseSequenceTextTemplateTokenLexer
-        where T : BaseSequenceToken, new()
+        where T : BaseSequenceToken, ITextTemplateTypedToken, new()
     {
         // Properties
         /// <inheritdoc/>
         public override string Sequence { get; }
         /// <inheritdoc/>
         public override byte Priority { get; }
+        /// <inheritdoc/>
+        public override IEnumerable<string> Produces => T.TokenType.AsEnumerable();
 
         /// <inheritdoc cref="SimpleSequenceTokenLexer{T}"/>
         /// <param name="sequence"><inheritdoc cref="Sequence"/></param>

@@ -10,7 +10,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
     /// <summary>
     /// Token that represents an identifier.
     /// </summary>
-    public class IdentifierToken : ITextTemplateToken
+    public class IdentifierToken : ITextTemplateToken, ITextTemplateTypedToken
     {
         // Properties
         /// <summary>
@@ -20,9 +20,12 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         /// <inheritdoc/>
         public int Length => Identifier.Length;
         /// <inheritdoc/>
-        public string Type => TextTemplateEngineConstants.Compilation.TokenTypes.Identifier;
+        public static string TokenType => TextTemplateEngineConstants.Compilation.TokenTypes.Identifier;
         /// <inheritdoc/>
-        public TokenPosition Position { get; init; }
+        public string Type => TokenType;
+
+        /// <inheritdoc/>
+        public TokenPosition Position { get; set; }
         /// <inheritdoc/>
         IEnumerable<char> ITextTemplateToken.TextValue => Identifier;
 

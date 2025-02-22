@@ -23,11 +23,20 @@ namespace Sels.TextTemplateEngine.Compilation
         /// The index of the token in line <see cref="Index"/>
         /// </summary>
         public int LineIndex { get; init; }
+        /// <summary>
+        /// Indicates if the token is virtual and not part of the source stream.
+        /// </summary>
+        public bool IsVirtual { get; init; }
 
         /// <inheritdoc/>
         public override string ToString()
         {
-            return $"Index: {Index}|Position {LineIndex} on Line {Line}";
+            var text = $"Index: {Index}|Position {LineIndex} on Line {Line}";
+            if(IsVirtual)
+            {
+                return $"Virtual({text})";
+            }
+            return text;
         }
     }
 }

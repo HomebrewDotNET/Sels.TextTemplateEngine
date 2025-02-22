@@ -17,12 +17,16 @@ namespace Sels.TextTemplateEngine.Compilation
         /// The first lexer that returns <see cref="TokenLexerResponse.CanParse"/> will be used to parse the token.
         /// </summary>
         public byte Priority { get; }
+        /// <summary>
+        /// The types of tokens the lexer can produce if known.
+        /// </summary>
+
+        public IEnumerable<string> Produces { get; }
 
         /// <summary>
         /// Checks if the token lexer is interested in the current buffer and character.
         /// </summary>
         /// <param name="context">The current lexer context</param>
-        /// <param name="isLastCharacter">Indicates if we are currently checking the last character in the stream</param>
         /// <param name="cancellationToken"></param>
         /// <returns>The response of the token lexer</returns>
         public Task<TokenLexerResponse> IsInterestedAsync(ITextTemplateLexerContext context, CancellationToken cancellationToken);

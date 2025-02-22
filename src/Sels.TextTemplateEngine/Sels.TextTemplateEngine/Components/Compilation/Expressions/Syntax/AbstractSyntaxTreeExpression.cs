@@ -13,9 +13,9 @@ namespace Sels.TextTemplateEngine.Expressions.Syntax
     /// <summary>
     /// Expression that represents the root of an expression tree.
     /// </summary>
-    public class SyntaxTreeRootExpression : TemplateBodySyntaxExpression
+    public class AbstractSyntaxTreeExpression : TemplateBodySyntaxExpression
     {
         /// <inheritdoc/>
-        public override string Type => TextTemplateEngineConstants.Compilation.SyntaxExpressionTypes.Root;
+        public override string Type => TextTemplateEngineConstants.Compilation.SyntaxExpressionTypes.Ast;
     }
 }

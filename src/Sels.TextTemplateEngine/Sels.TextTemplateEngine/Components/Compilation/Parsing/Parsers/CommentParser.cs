@@ -22,6 +22,15 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing.Parsers
             x => x.Type.EqualsNoCase(TextTemplateEngineConstants.Compilation.TokenTypes.Comment)
         ];
 
+        /// <inheritdoc/>
+        public override IEnumerable<string> Parses
+        {
+            get
+            {
+                yield return TextTemplateEngineConstants.Compilation.ExpressionTypes.Comment;
+            }
+        }
+
         /// <inheritdoc cref="CommentParser"/>
         /// <param name="priority"><inheritdoc cref="Priority"/></param>
         public CommentParser(byte priority) : base (priority)

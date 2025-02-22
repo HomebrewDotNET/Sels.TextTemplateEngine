@@ -11,7 +11,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
     /// <summary>
     /// Token that indicates the end of an expression block.
     /// </summary>
-    public class ExpressionEndBlockToken : BaseSequenceToken
+    public class ExpressionEndBlockToken : BaseSequenceToken, ITextTemplateTypedToken
     {
         // Statics
         private static char[] _characters = TextTemplateEngineConstants.Compilation.Syntax.BlockEndToken.ToCharArray();
@@ -22,6 +22,8 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         /// </summary>
         public override IReadOnlyList<char> Characters => _characters;
         /// <inheritdoc/>
-        public override string Type => TextTemplateEngineConstants.Compilation.TokenTypes.BlockEnd;
+        public static string TokenType => TextTemplateEngineConstants.Compilation.TokenTypes.BlockEnd;
+        /// <inheritdoc/>
+        public override string Type => TokenType;
     }
 }

@@ -29,6 +29,16 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing.Parsers
         ];
         /// <inheritdoc/>
         public override int? MatchWhitespaceAfterIndex => 1;
+        /// <inheritdoc/>
+        public override IEnumerable<string> Parses
+        {
+            get
+            {
+                yield return TextTemplateEngineConstants.Compilation.ExpressionTypes.Variable;
+                yield return TextTemplateEngineConstants.Compilation.SyntaxExpressionTypes.Wrapped;
+                yield return TextTemplateEngineConstants.Compilation.ExpressionTypes.Accessor;
+            }
+        }
 
         /// <inheritdoc cref="AccessorExpressionParser"/>
         /// <param name="priority"><inheritdoc cref="BaseRecurringMatchingSetTextTemplateParser.Priority"/></param>
@@ -57,7 +67,7 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing.Parsers
                 {
                     var (response, parser) = await subScope.AreInterestedInAsync(cancellationToken).ConfigureAwait(false);
 
-                    if (response == ExpressionParserResponse.CanParse)
+                    if (response == SyntaxExpressionParserResponse.CanParse)
                     {
                         var expressions = new List<ITextTemplateSyntaxExpression>();
                         await foreach(var expression in subScope.ParseAsync(parser!, cancellationToken))

@@ -19,29 +19,33 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
     {
         // Fields
         private readonly ILogger? _logger;
+        private readonly ITextTemplateTokenLexer[] _tokenLexers;
 
         /// <inheritdoc cref="TextTemplateLexer"/>
-        /// <param name="tokenLexers">The token lexers that will be used to read tokens</param>
+        /// <param name="lexers">The token lexers that will be used to read tokens</param>
         /// <param name="logger">Optional logger for tracing</param>
-        public TextTemplateLexer(ILogger<TextTemplateLexer>? logger = null)
+        public TextTemplateLexer(IEnumerable<ITextTemplateTokenLexer> lexers, ILogger<TextTemplateLexer>? logger = null)
         {
+            _tokenLexers = Guard.IsNotNull(lexers).ToArray();
             _logger = logger;
         }
 
         /// <inheritdoc/>
-        public async IAsyncEnumerable<ITextTemplateToken> LexAsync(IEnumerable<ITextTemplateTokenLexer> tokenLexers, Stream stream, Encoding? encoding = null, bool ownsStream = true, int bufferLength = 1024, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public async IAsyncEnumerable<ITextTemplateToken> LexAsync(string compilerProcess, Action<ITextTemplateLexerConfigurationBuilder> configure, Stream stream, Encoding? encoding = null, bool ownsStream = true, int bufferLength = 1024, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
+            compilerProcess = Guard.IsNotNull(compilerProcess);
             stream = Guard.IsNotNull(stream);
             bufferLength = Guard.IsLarger(bufferLength, 0);
-            tokenLexers = Guard.IsNotNullOrEmpty(Guard.IsNotNull(tokenLexers).Where(x => x != null).OrderBy(x => x.Priority)).ToArray();
+            configure = Guard.IsNotNull(configure);
 
             _logger.Log($"Preparing to read stream <{stream}> using a buffer length of <{bufferLength}> to lex it into tokens");
 
             try
             {
-                var context = new TextTemplateLexerContext(stream, tokenLexers);
+                var settings = new TextTemplateLexerSettings(_tokenLexers, configure);
+                var context = new TextTemplateLexerContext(compilerProcess, stream, settings);
                 var interfaceContext = context.CastTo<ITextTemplateLexerContext>();
-                using (var streamReader = encoding != null ? new StreamReader(stream, encoding) : new StreamReader(stream, true))
+                using (var streamReader = encoding != null ? new StreamReader(stream, encoding, leaveOpen: true) : new StreamReader(stream, detectEncodingFromByteOrderMarks: true, leaveOpen: true))
                 {
                     char[] buffer = new char[bufferLength];
                     var streamPosition = 0;
@@ -55,10 +59,12 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
                         streamPosition += charactersRead;
                         _logger.Debug($"Read <{charactersRead}> characters from stream at position <{streamPosition}>");
                         context.IsLastCharacter = false;
-                        for (int i = 0; i < charactersRead; i++)
+                        await foreach (var (i, character) in context.InterceptAsync(buffer.Take(charactersRead).ToArray(), cancellationToken).ConfigureAwait(false))
                         {
+                            cancellationToken.ThrowIfCancellationRequested();
+
                             lexCurrentBuffer = true;
-                            context.Buffer.Add(buffer[i]);
+                            context.Buffer.Add(character);
                             var lastCharacterInCurrentBuffer = i == charactersRead - 1;
                             context.IsLastCharacter = atEndOfStream && lastCharacterInCurrentBuffer;
 
@@ -126,27 +132,29 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
                     {
                         _logger.Debug($"Token was generated at <{token.Position}> while buffer is at position <{interfaceContext.BufferIndex}>. Trying to lex remaining buffer before token");
                         var remainingBuffer = context.Buffer.Take(bufferBeforeToken).ToList();
-                        var remainingBufferContext = new TextTemplateLexerContext(context, remainingBuffer) { IsLastCharacter = true };
+                        var remainingBufferContext = new TextTemplateLexerContext(context.CompilerProcess, context, remainingBuffer) { IsLastCharacter = true };
                         context.Buffer.RemoveRange(0, bufferBeforeToken);
                         await foreach (var bufferToken in TryLexAsync(remainingBufferContext, cancellationToken).ConfigureAwait(false))
                         {
                             yield return bufferToken;
                         }
-
-                        if (remainingBufferContext.Buffer.HasValue()) yield return new TextTemplateTextToken(remainingBufferContext.Buffer) { Position = new TokenPosition() { Index = ((ITextTemplateLexerContext)remainingBufferContext).BufferIndex, Line = remainingBufferContext.Line, LineIndex = ((ITextTemplateLexerContext)remainingBufferContext).BufferLineIndex } };
+                        
+                        if (remainingBufferContext.Buffer.HasValue())
+                        {
+                            var remainingToken = new TextTemplateTextToken(remainingBufferContext.Buffer) { Position = new TokenPosition() { Index = ((ITextTemplateLexerContext)remainingBufferContext).BufferIndex, Line = remainingBufferContext.Line, LineIndex = ((ITextTemplateLexerContext)remainingBufferContext).BufferLineIndex } };
+                            await foreach(var returnToken in context.InterceptAsync(remainingToken, cancellationToken).ConfigureAwait(false))
+                            {
+                                yield return returnToken;
+                            }
+                        }
                     }
                     // Remove token from remaining buffer
                     context.Buffer.RemoveRange(0, token.Length);
 
-                    // Increase line count if token is a new line
-                    if (TextTemplateEngineConstants.Compilation.TokenTypes.NewLine.EqualsNoCase(token.Type))
+                    await foreach (var returnToken in context.InterceptAsync(token, cancellationToken).ConfigureAwait(false))
                     {
-                        _logger.Debug($"Token <{token}> is a new line. Increasing line count");
-                        context.Line++;
-                        context.LineIndex = 0;
+                        yield return returnToken;
                     }
-
-                    yield return token;
                     break;
                 }
                 else if (!context.IsLastCharacter && response == TokenLexerResponse.Interested)
@@ -159,6 +167,8 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
 
         private class TextTemplateLexerContext : ITextTemplateLexerContext
         {
+            // Properties
+            public string CompilerProcess { get; }
             public Stream Source { get; }
             public int Index { get; set; } = 0;
             public int Line { get; set; } = 1;
@@ -167,15 +177,19 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
             public IReadOnlyList<ITextTemplateTokenLexer> TokenLexers { get; }
             public bool IsLastCharacter { get; set; }
             public int LineIndex { get; set; } = 0;
+            public TextTemplateLexerSettings Settings { get; }
 
-            public TextTemplateLexerContext(Stream source, IEnumerable<ITextTemplateTokenLexer> lexers)
+            public TextTemplateLexerContext(string compilerProcess, Stream source, TextTemplateLexerSettings settings)
             {
+                CompilerProcess = Guard.IsNotNull(compilerProcess);
                 Source = Guard.IsNotNull(source);
-                TokenLexers = Guard.IsNotNullOrEmpty(lexers).ToList();
+                TokenLexers = settings.Lexers.OrderBy(x => x.Priority).ToList();
+                Settings = Guard.IsNotNull(settings);
             }
 
-            public TextTemplateLexerContext(TextTemplateLexerContext context, List<char> newBuffer)
+            public TextTemplateLexerContext(string compilerProcess, TextTemplateLexerContext context, List<char> newBuffer)
             {
+                CompilerProcess = Guard.IsNotNull(compilerProcess);
                 context = Guard.IsNotNull(context);
                 newBuffer = Guard.IsNotNull(newBuffer);
                 Source = context.Source;
@@ -185,6 +199,83 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
                 Buffer = newBuffer;
                 TokenLexers = context.TokenLexers;
                 IsLastCharacter = context.IsLastCharacter;
+                Settings = context.Settings;
+            }
+
+            public async IAsyncEnumerable<(int BufferPosition, char Character)> InterceptAsync(char[] charachtersRead, [EnumeratorCancellation] CancellationToken cancellationToken)
+            {
+                for (int i = 0; i < charachtersRead.Length; i++)
+                {
+                    char character = charachtersRead[i];
+                    bool consumed = false;
+                    foreach (var interceptor in Settings.Interceptors)
+                    {
+                        var result = await interceptor(this, character, cancellationToken).ConfigureAwait(false);
+                        if (result.HasValue())
+                        {
+                            if(result!.Length == 1 && result[0].Equals(character)) continue;
+                            foreach (var newCharacter in result!.Where(x => x.HasValue))
+                            {
+                                yield return (i, newCharacter!.Value);
+                            }
+                        }
+                        consumed = true;
+                        break;
+                    }
+
+                    if(!consumed)
+                    {
+                        yield return (i, character);
+                    }
+                }
+            }
+
+            public async IAsyncEnumerable<ITextTemplateToken> InterceptAsync(ITextTemplateToken token, [EnumeratorCancellation] CancellationToken cancellationToken)
+            {
+                void IncreaseIfLine(ITextTemplateToken token)
+                {
+                    token = Guard.IsNotNull(token);
+                    if (token.Type.EqualsNoCase(TextTemplateEngineConstants.Compilation.TokenTypes.NewLine) && !token.Position.IsVirtual)
+                    {
+                        Line++;
+                        LineIndex = 0;
+                    }
+                }
+
+                bool consumed = false;
+                foreach (var interceptor in Settings.TokenInterceptors)
+                {
+                    bool interceptorConsumed = false;
+                    int tokenCount = 0;
+                    await foreach (var newToken in interceptor(this, token, cancellationToken).ConfigureAwait(false))
+                    {
+                        if (newToken != null)
+                        {
+                            tokenCount++;
+                            var tokenPosition = new TokenPosition() { Index = ((ITextTemplateLexerContext)this).Index, Line = Line, LineIndex = ((ITextTemplateLexerContext)this).BufferLineIndex, IsVirtual = token != newToken };
+
+                            newToken.Position = tokenPosition;
+
+                            if (!interceptorConsumed) interceptorConsumed = token.Position.IsVirtual;
+
+                            if(!token.Position.IsVirtual || !consumed) yield return newToken;
+                            IncreaseIfLine(token);
+                        }
+                        else if(tokenCount == 0)
+                        {
+                            consumed = true;
+                        }
+                    }
+                    consumed = interceptorConsumed && tokenCount > 1;
+                    if(consumed) break;
+                }
+
+                if (!consumed)
+                {
+                    token.Position = new TokenPosition() { Index = ((ITextTemplateLexerContext)this).Index, Line = Line, LineIndex = ((ITextTemplateLexerContext)this).BufferLineIndex, IsVirtual = false };
+                    yield return token;
+                    IncreaseIfLine(token);
+                }
             }
         }
     }

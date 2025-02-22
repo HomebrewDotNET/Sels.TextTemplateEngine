@@ -21,7 +21,7 @@ namespace Sels.TextTemplateEngine.Templates.Compilation.Lexing.Tokens
         /// <inheritdoc/>
         public int Length => Characters.Count;
         /// <inheritdoc/>
-        public TokenPosition Position { get; init; }
+        public TokenPosition Position { get; set; }
         /// <inheritdoc/>
         IEnumerable<char> ITextTemplateToken.TextValue => Characters;
     }

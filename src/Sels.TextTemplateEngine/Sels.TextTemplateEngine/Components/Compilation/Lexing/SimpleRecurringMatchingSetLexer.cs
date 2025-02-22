@@ -1,4 +1,5 @@
 ﻿using Sels.Core;
+using Sels.Core.Extensions.Conversion;
 using Sels.TextTemplateEngine.Templates.Compilation.Lexing;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
     /// </summary>
     /// <typeparam name="T">The type of the token to create</typeparam>
     public class SimpleRecurringMatchingSetLexer<T> : BaseRecurringMatchingSetTextTemplateTokenLexer
-        where T : ITextTemplateToken
+        where T : ITextTemplateTypedToken
     {
         // Fields
         private readonly Func<char, Task<bool>> _isMatch;
@@ -23,6 +24,8 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
         // Properties
         /// <inheritdoc/>
         public override byte Priority => _priority;
+        /// <inheritdoc/>
+        public override IEnumerable<string> Produces => T.TokenType.AsEnumerable();
 
         /// <inheritdoc cref="SimpleRecurringMatchingSetLexer{T}"/>
         /// <param name="match">Delegate that matches the signiture of <see cref="BaseRecurringMatchingSetTextTemplateTokenLexer.IsMatch(char)"/></param>
@@ -48,10 +51,10 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
             _priority = priority;
         }
 
-        // <inheritdoc/>
+        /// <inheritdoc/>
         public override Task<bool> IsMatch(char character)
         => _isMatch(character);
-        // <inheritdoc/>
+        /// <inheritdoc/>
         protected override async Task<ITextTemplateToken> GenerateAsync(ITextTemplateLexerContext context, int bufferMatchPosition, char[] recurringSet, CancellationToken cancellationToken)
         => await _generate(context, bufferMatchPosition, recurringSet, cancellationToken).ConfigureAwait(false);
     }

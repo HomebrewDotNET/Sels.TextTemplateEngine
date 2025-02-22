@@ -12,7 +12,7 @@ namespace Sels.TextTemplateEngine.Templates.Compilation.Parsing.Parsers
     /// <summary>
     /// Base class for creating a parser that can start parsing starting from a recurring set of tokens.
     /// </summary>
-    public abstract class BaseRecurringMatchingSetTextTemplateParser : ITextTemplateExpressionParser
+    public abstract class BaseRecurringMatchingSetTextTemplateParser : ITextTemplateSyntaxExpressionParser
     {
         // Properties
         /// <inheritdoc/>
@@ -25,6 +25,8 @@ namespace Sels.TextTemplateEngine.Templates.Compilation.Parsing.Parsers
         /// If set any whitepsace tokens after this index will be matched automatically. Matched whitespace tokens does not count towards the recurring set index when choosing the predicate.
         /// </summary>
         public virtual int? MatchWhitespaceAfterIndex { get; }
+        /// <inheritdoc/>
+        public abstract IEnumerable<string> Parses { get; }
 
         /// <inheritdoc cref="BaseRecurringMatchingSetTextTemplateParser"/>
         /// <param name="priority"><inheritdoc cref="Priority"/></param>
@@ -34,14 +36,14 @@ namespace Sels.TextTemplateEngine.Templates.Compilation.Parsing.Parsers
         }
 
         /// <inheritdoc/>
-        public async Task<ExpressionParserResponse> IsInterestedAsync(ITextTemplateParserContext context, CancellationToken cancellationToken)
+        public async Task<SyntaxExpressionParserResponse> IsInterestedAsync(ITextTemplateParserContext context, CancellationToken cancellationToken)
         {
             context = Guard.IsNotNull(context);
 
             return (await SearchForStartToken(context, cancellationToken).ConfigureAwait(false)).Response;
         }
 
-        private Task<(ExpressionParserResponse Response, int? StartIndex, int? EndIndex)> SearchForStartToken(ITextTemplateParserContext context, CancellationToken cancellationToken)
+        private Task<(SyntaxExpressionParserResponse Response, int? StartIndex, int? EndIndex)> SearchForStartToken(ITextTemplateParserContext context, CancellationToken cancellationToken)
         {
             context = Guard.IsNotNull(context);
             var conditions = Guard.IsNotNullOrEmpty(RecurringSetConditions);
@@ -69,16 +71,16 @@ namespace Sels.TextTemplateEngine.Templates.Compilation.Parsing.Parsers
 
                     if (conditionIndex == conditions.Length - 1)
                     {
-                        return Task.FromResult<(ExpressionParserResponse, int? StartIndex, int? EndIndex)>((ExpressionParserResponse.CanParse, index, tokenIndex));
+                        return Task.FromResult<(SyntaxExpressionParserResponse, int? StartIndex, int? EndIndex)>((SyntaxExpressionParserResponse.CanParse, index, tokenIndex));
                     }
                     else if (tokenIndex == context.Buffer.Count - 1 && !context.IsLastToken)
                     {
-                        return Task.FromResult<(ExpressionParserResponse, int? StartIndex, int? EndIndex)>((ExpressionParserResponse.Interested, index, tokenIndex));
+                        return Task.FromResult<(SyntaxExpressionParserResponse, int? StartIndex, int? EndIndex)>((SyntaxExpressionParserResponse.Interested, index, tokenIndex));
                     }
                 }
             }
 
-            return Task.FromResult<(ExpressionParserResponse, int? StartIndex, int? EndIndex)>((ExpressionParserResponse.NotInterested, null, null));
+            return Task.FromResult<(SyntaxExpressionParserResponse, int? StartIndex, int? EndIndex)>((SyntaxExpressionParserResponse.NotInterested, null, null));
         }
 
         /// <inheritdoc/>
@@ -86,7 +88,7 @@ namespace Sels.TextTemplateEngine.Templates.Compilation.Parsing.Parsers
         {
             context = Guard.IsNotNull(context);
             var (response, startIndex, endIndex) = await SearchForStartToken(context, cancellationToken);
-            _ = Guard.Is(response, x => x == ExpressionParserResponse.CanParse);
+            _ = Guard.Is(response, x => x == SyntaxExpressionParserResponse.CanParse);
 
             var currentTokens = context.Buffer.Skip(startIndex!.Value).Take(endIndex!.Value - startIndex.Value).ToList();
 

@@ -16,6 +16,8 @@ namespace Sels.TextTemplateEngine.Templates.Compilation.Lexing
         // Properties
         /// <inheritdoc/>
         public abstract byte Priority { get; }
+        /// <inheritdoc/>
+        public abstract IEnumerable<string> Produces { get; }
 
         /// <inheritdoc/>
         public async Task<ITextTemplateToken> GenerateAsync(ITextTemplateLexerContext context, CancellationToken cancellationToken)

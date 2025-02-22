@@ -11,7 +11,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
     /// <summary>
     /// Token that indicates the start of an expression block.
     /// </summary>
-    public class ExpressionBlockToken : BaseSequenceToken
+    public class ExpressionBlockToken : BaseSequenceToken, ITextTemplateTypedToken
     {
         // Statics
         private static char[] _characters = TextTemplateEngineConstants.Compilation.Syntax.BlockStartToken.ToCharArray();
@@ -22,6 +22,8 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         /// </summary>
         public override IReadOnlyList<char> Characters => _characters;
         /// <inheritdoc/>
-        public override string Type => TextTemplateEngineConstants.Compilation.TokenTypes.BlockStart;
+        public static string TokenType => TextTemplateEngineConstants.Compilation.TokenTypes.BlockStart;
+        /// <inheritdoc/>
+        public override string Type => TokenType;
     }
 }

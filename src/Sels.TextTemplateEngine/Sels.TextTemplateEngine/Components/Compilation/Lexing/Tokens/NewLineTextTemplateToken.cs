@@ -1,4 +1,5 @@
 ﻿using Sels.Core;
+using Sels.Core.Extensions.Conversion;
 using Sels.TextTemplateEngine.Templates.Compilation.Lexing;
 using Sels.TextTemplateEngine.Templates.Compilation.Lexing.Tokens;
 using System;
@@ -12,7 +13,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
     /// <summary>
     /// Token that represents a new line.
     /// </summary>
-    public class NewLineTextTemplateToken : BaseSequenceToken
+    public class NewLineTextTemplateToken : BaseSequenceToken, ITextTemplateTypedToken
     {
         // Properties
         /// <summary>
@@ -20,7 +21,9 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         /// </summary>
         public override IReadOnlyList<char> Characters { get; }
         /// <inheritdoc/>
-        public override string Type => TextTemplateEngineConstants.Compilation.TokenTypes.NewLine;
+        public static string TokenType => TextTemplateEngineConstants.Compilation.TokenTypes.NewLine;
+        /// <inheritdoc/>
+        public override string Type => TokenType;
 
         /// <inheritdoc cref="NewLineTextTemplateToken"/>
         /// <param name="characters"><inheritdoc cref="Characters"/></param>
@@ -46,6 +49,9 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing.Tokens
         public override string Sequence => Environment.NewLine;
         /// <inheritdoc/>
         public override byte Priority => LexerPriority;
+        /// <inheritdoc/>
+        public override IEnumerable<string> Produces => NewLineTextTemplateToken.TokenType.AsEnumerable();
+
         /// <inheritdoc/>
         protected override Task<ITextTemplateToken> GenerateAsync(ITextTemplateLexerContext context, int bufferMatchPosition, CancellationToken cancellationToken)
         => Task.FromResult<ITextTemplateToken>(new NewLineTextTemplateToken(_newLineCharacters) { Position = new TokenPosition { Index = bufferMatchPosition, Line = context.Line, LineIndex = context.BufferLineIndex } });

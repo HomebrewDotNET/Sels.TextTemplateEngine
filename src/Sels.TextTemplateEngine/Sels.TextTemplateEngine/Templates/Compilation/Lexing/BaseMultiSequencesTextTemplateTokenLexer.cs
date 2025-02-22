@@ -20,6 +20,9 @@ namespace Sels.TextTemplateEngine.Templates.Compilation.Lexing
         /// <inheritdoc/>
         public abstract byte Priority { get; }
         /// <inheritdoc/>
+        public abstract IEnumerable<string> Produces { get; }
+
+        /// <inheritdoc/>
         public Task<ITextTemplateToken> GenerateAsync(ITextTemplateLexerContext context, CancellationToken cancellationToken)
         {
             context = Guard.IsNotNull(context);

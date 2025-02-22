@@ -7,23 +7,27 @@ using System.Threading.Tasks;
 namespace Sels.TextTemplateEngine.Compilation
 {
     /// <summary>
-    /// Called by a <see cref="ITextTemplateParser"/> or another <see cref="ITextTemplateExpressionParser"/> to see if the parser can create an expression using the current token buffer.
-    /// If it is the parser will call <see cref="ITextTemplateExpressionParser.ParseAsync(ITextTemplateParserContext, CancellationToken)"/> to get the token.
+    /// Called by a <see cref="ITextTemplateParser"/> or another <see cref="ITextTemplateSyntaxExpressionParser"/> to see if the parser can create an expression using the current token buffer.
+    /// If it is the parser will call <see cref="ITextTemplateSyntaxExpressionParser.ParseAsync(ITextTemplateParserContext, CancellationToken)"/> to get the token.
     /// </summary>
-    public interface ITextTemplateExpressionParser
+    public interface ITextTemplateSyntaxExpressionParser
     {
         /// <summary>
         /// Determines the order in which <see cref="ITextTemplateParserContext"/> will call all expression parsers.
-        /// The first parser that returns <see cref="ExpressionParserResponse.CanParse"/> will be used to parse the token.
+        /// The first parser that returns <see cref="SyntaxExpressionParserResponse.CanParse"/> will be used to parse the token.
         /// </summary>
         public byte Priority { get; }
+        /// <summary>
+        /// The type of expressions this parser can parse.
+        /// </summary>
+        public IEnumerable<string> Parses { get; }
         /// <summary>
         /// Checks if the expression parser is interested in the current buffer and token.
         /// </summary>
         /// <param name="context">The current lexer context</param>
         /// <param name="cancellationToken">Optional token to cancel the request</param>
         /// <returns>The response from the parser</returns>
-        public Task<ExpressionParserResponse> IsInterestedAsync(ITextTemplateParserContext context, CancellationToken cancellationToken);
+        public Task<SyntaxExpressionParserResponse> IsInterestedAsync(ITextTemplateParserContext context, CancellationToken cancellationToken);
         /// <summary>
         /// Generates an expression from the current buffer and token in <paramref name="context"/>.
         /// </summary>
@@ -33,9 +37,9 @@ namespace Sels.TextTemplateEngine.Compilation
         public Task<ITextTemplateSyntaxExpression> ParseAsync(ITextTemplateParserContext context, CancellationToken cancellationToken);
     }
     /// <summary>
-    /// Response from a <see cref="ITextTemplateExpressionParser"/> to indicate if the parser is interested in the current buffer and character.
+    /// Response from a <see cref="ITextTemplateSyntaxExpressionParser"/> to indicate if the parser is interested in the current buffer and character.
     /// </summary>
-    public enum ExpressionParserResponse
+    public enum SyntaxExpressionParserResponse
     {
         /// <summary>
         /// Not interested in the current buffer and character.
