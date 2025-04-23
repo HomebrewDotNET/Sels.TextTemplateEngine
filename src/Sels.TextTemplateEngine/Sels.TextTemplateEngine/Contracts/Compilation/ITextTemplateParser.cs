@@ -17,12 +17,12 @@ namespace Sels.TextTemplateEngine.Compilation
         /// <summary>
         /// Parses all tokens returned by <paramref name="tokens"/> into an expression tree.
         /// </summary>
-        /// <param name="compilerProcess">Gives an indication on what compiler process is being executed. Handy for resolving named options. Empty string if not provided</param>
+        /// <param name="compilationContext">The configured compilation context</param>
         /// <param name="configure">Delegate called to get the settings to use for parsing <paramref name="tokens"/></param>
         /// <param name="tokens">Enumerator returning all the token to parse</param>
         /// <param name="cancellationToken">Optional token to cancel the request</param>
         /// <returns>The parsed abstract syntax tree</returns>
-        public Task<AbstractSyntaxTreeExpression> ParseAsync(string compilerProcess, Action<ITextTemplateParserConfigurationBuilder> configure, IAsyncEnumerable<ITextTemplateToken> tokens, CancellationToken cancellationToken = default);
+        public Task<AbstractSyntaxTreeExpression> ParseAsync(ITextTemplateCompilationContext compilationContext, Action<ITextTemplateParserConfigurationBuilder> configure, IAsyncEnumerable<ITextTemplateToken> tokens, CancellationToken cancellationToken = default);
     }
 
     /// <summary>
@@ -147,12 +147,8 @@ namespace Sels.TextTemplateEngine.Compilation
     /// <summary>
     /// Context that contains the current state of the parser when creating the syntax tree.
     /// </summary>
-    public interface ITextTemplateParserContext : IDisposable
+    public interface ITextTemplateParserContext : ITextTemplateCompilationContext, IDisposable
     {
-        /// <summary>
-        /// Gives an indication on what compiler process is being executed. Handy for resolving named options. Empty string if not provided.
-        /// </summary>
-        public string CompilerProcess { get; }
         // Token
         /// <summary>
         /// The current buffer of tokens being parsed.

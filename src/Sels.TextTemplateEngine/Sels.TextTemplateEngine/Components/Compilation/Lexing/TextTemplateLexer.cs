@@ -19,21 +19,19 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
     {
         // Fields
         private readonly ILogger? _logger;
-        private readonly ITextTemplateTokenLexer[] _tokenLexers;
 
         /// <inheritdoc cref="TextTemplateLexer"/>
         /// <param name="lexers">The token lexers that will be used to read tokens</param>
         /// <param name="logger">Optional logger for tracing</param>
-        public TextTemplateLexer(IEnumerable<ITextTemplateTokenLexer> lexers, ILogger<TextTemplateLexer>? logger = null)
+        public TextTemplateLexer(ILogger<TextTemplateLexer>? logger = null)
         {
-            _tokenLexers = Guard.IsNotNull(lexers).ToArray();
             _logger = logger;
         }
 
         /// <inheritdoc/>
-        public async IAsyncEnumerable<ITextTemplateToken> LexAsync(string compilerProcess, Action<ITextTemplateLexerConfigurationBuilder> configure, Stream stream, Encoding? encoding = null, bool ownsStream = true, int bufferLength = 1024, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public async IAsyncEnumerable<ITextTemplateToken> LexAsync(ITextTemplateCompilationContext compilationContext, Action<ITextTemplateLexerConfigurationBuilder> configure, Stream stream, Encoding? encoding = null, bool ownsStream = true, int bufferLength = 1024, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            compilerProcess = Guard.IsNotNull(compilerProcess);
+            compilationContext = Guard.IsNotNull(compilationContext);
             stream = Guard.IsNotNull(stream);
             bufferLength = Guard.IsLarger(bufferLength, 0);
             configure = Guard.IsNotNull(configure);
@@ -42,8 +40,13 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
 
             try
             {
-                var settings = new TextTemplateLexerSettings(_tokenLexers, configure);
-                var context = new TextTemplateLexerContext(compilerProcess, stream, settings);
+                var tokenLexers = compilationContext.GetCompilerServices<ITextTemplateTokenLexer>();
+                if (!tokenLexers.HasValue())
+                {
+                    throw new InvalidOperationException($"No token lexers found for <{compilationContext.CompilerProcess}>. Please register at least one token lexer in the compilation context");
+                }
+                var settings = new TextTemplateLexerSettings(tokenLexers, configure);
+                var context = new TextTemplateLexerContext(compilationContext, stream, settings);
                 var interfaceContext = context.CastTo<ITextTemplateLexerContext>();
                 using (var streamReader = encoding != null ? new StreamReader(stream, encoding, leaveOpen: true) : new StreamReader(stream, detectEncodingFromByteOrderMarks: true, leaveOpen: true))
                 {
@@ -132,7 +135,7 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
                     {
                         _logger.Debug($"Token was generated at <{token.Position}> while buffer is at position <{interfaceContext.BufferIndex}>. Trying to lex remaining buffer before token");
                         var remainingBuffer = context.Buffer.Take(bufferBeforeToken).ToList();
-                        var remainingBufferContext = new TextTemplateLexerContext(context.CompilerProcess, context, remainingBuffer) { IsLastCharacter = true };
+                        var remainingBufferContext = new TextTemplateLexerContext(context, context, remainingBuffer) { IsLastCharacter = true };
                         context.Buffer.RemoveRange(0, bufferBeforeToken);
                         await foreach (var bufferToken in TryLexAsync(remainingBufferContext, cancellationToken).ConfigureAwait(false))
                         {
@@ -165,8 +168,11 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
             }
         }
 
-        private class TextTemplateLexerContext : ITextTemplateLexerContext
+        private class TextTemplateLexerContext : ITextTemplateLexerContext, ITextTemplateCompilationContext
         {
+            // Fields
+            private readonly ITextTemplateCompilationContext _compilationContext;
+
             // Properties
             public string CompilerProcess { get; }
             public Stream Source { get; }
@@ -179,17 +185,19 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
             public int LineIndex { get; set; } = 0;
             public TextTemplateLexerSettings Settings { get; }
 
-            public TextTemplateLexerContext(string compilerProcess, Stream source, TextTemplateLexerSettings settings)
+            public IServiceProvider CompilationScope => _compilationContext.CompilationScope;
+
+            public TextTemplateLexerContext(ITextTemplateCompilationContext compilationContext, Stream source, TextTemplateLexerSettings settings)
             {
-                CompilerProcess = Guard.IsNotNull(compilerProcess);
+                _compilationContext = Guard.IsNotNull(compilationContext);
                 Source = Guard.IsNotNull(source);
                 TokenLexers = settings.Lexers.OrderBy(x => x.Priority).ToList();
                 Settings = Guard.IsNotNull(settings);
             }
 
-            public TextTemplateLexerContext(string compilerProcess, TextTemplateLexerContext context, List<char> newBuffer)
+            public TextTemplateLexerContext(ITextTemplateCompilationContext compilationContext, TextTemplateLexerContext context, List<char> newBuffer)
             {
-                CompilerProcess = Guard.IsNotNull(compilerProcess);
+                _compilationContext = Guard.IsNotNull(compilationContext);
                 context = Guard.IsNotNull(context);
                 newBuffer = Guard.IsNotNull(newBuffer);
                 Source = context.Source;
@@ -276,6 +284,18 @@ namespace Sels.TextTemplateEngine.Compilation.Lexing
                     yield return token;
                     IncreaseIfLine(token);
                 }
+            }
+
+            public T GetOptions<T>()
+                where T : class
+            {
+                return _compilationContext.GetOptions<T>();
+            }
+
+            public T[] GetCompilerServices<T>()
+                where T : class
+            {
+                return _compilationContext.GetCompilerServices<T>();
             }
         }
     }

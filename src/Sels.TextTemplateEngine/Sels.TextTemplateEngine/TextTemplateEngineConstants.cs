@@ -258,6 +258,33 @@ namespace Sels.TextTemplateEngine
                 /// </summary>
                 public const string Argument = "Argument";
             }
+
+            /// <summary>
+            /// Contains constants related to the statistics of the compilation process.
+            /// </summary>
+            public static class Statistics
+            {
+                /// <summary>
+                /// Key of the performance metric that tracks how long it took to lex the input.
+                /// </summary>
+                public const string PerformanceLexing = "LexingStep";
+                /// <summary>
+                /// Key of the performance metric that tracks how long it took to parse the input into an abstract syntax tree.
+                /// </summary>
+                public const string PerformanceParsing = "ParsingStep";
+                /// <summary>
+                /// Key of the performance metric that tracks how long it took to analyze/optimize the syntax tree.
+                /// </summary>
+                public const string PerformanceAnalyzing = "AnalyzingStep";
+                /// <summary>
+                /// Key of the performance metric that tracks how long it took to compile the syntax tree into an artifact.
+                /// </summary>
+                public const string PerformanceArtifactCompilation = "ArtifactCompilationStep";
+                /// <summary>
+                /// Key of the performance metric that tracks how long all the compilation steps + overhead took.
+                /// </summary>
+                public const string PerformanceCompilation = "TextCompilation";
+            }
         }
     }
 }

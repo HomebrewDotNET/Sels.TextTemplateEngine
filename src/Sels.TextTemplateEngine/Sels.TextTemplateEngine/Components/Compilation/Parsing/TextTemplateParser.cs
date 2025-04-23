@@ -21,27 +21,31 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
     {
         // Fields
         private readonly ILogger? _logger;
-        private readonly ITextTemplateSyntaxExpressionParser[] _expressionParsers;
 
         /// <inheritdoc cref="TextTemplateParser"/>
         /// <param name="parsers">The parsers that will parse tokens into expressions</param>
         /// <param name="logger">Optional logger for tracing</param>
-        public TextTemplateParser(IEnumerable<ITextTemplateSyntaxExpressionParser> parsers, ILogger<TextTemplateParser>? logger = null)
+        public TextTemplateParser(ILogger<TextTemplateParser>? logger = null)
         {
-            _expressionParsers = Guard.IsNotNull(parsers).ToArray();
             _logger = logger;
         }
 
         /// <inheritdoc/>
-        public async Task<AbstractSyntaxTreeExpression> ParseAsync(string compilerProcess, Action<ITextTemplateParserConfigurationBuilder> configure, IAsyncEnumerable<ITextTemplateToken> tokens, CancellationToken cancellationToken = default)
+        public async Task<AbstractSyntaxTreeExpression> ParseAsync(ITextTemplateCompilationContext compilationContext, Action<ITextTemplateParserConfigurationBuilder> configure, IAsyncEnumerable<ITextTemplateToken> tokens, CancellationToken cancellationToken = default)
         {
-            compilerProcess = Guard.IsNotNull(compilerProcess);
+            compilationContext = Guard.IsNotNull(compilationContext);
             tokens = Guard.IsNotNull(tokens);
 
-            var settings = new TextTemplateParserSettings(_expressionParsers, configure);
+            var expressionParsers = compilationContext.GetCompilerServices<ITextTemplateSyntaxExpressionParser>();
+            if (expressionParsers == null || expressionParsers.Length == 0)
+            {
+                throw new InvalidOperationException($"No expression parsers found in the current compilation context <{compilationContext.CompilerProcess}>. Please register at least one expression parser in the compilation context");
+            }
+
+            var settings = new TextTemplateParserSettings(expressionParsers, configure);
             _logger.Log($"Preparing to parse token into syntax tree using <{settings.Parsers.Count}> expression parsers");
 
-            await using var context = new RootContext(settings, tokens.GetAsyncEnumerator(cancellationToken), _logger) { CompilerProcess = compilerProcess};
+            await using var context = new RootContext(compilationContext, settings, tokens.GetAsyncEnumerator(cancellationToken), _logger);
             var interfactContext = (ITextTemplateParserContext)context;
             _logger.Debug($"Created root context. Starting parse using <{settings.Parsers.Count}> expression parsers");
             using var tracer = _logger.TraceAction($"Create syntax tree with <{context.Parsers.Count}> parsers");
@@ -96,7 +100,7 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
             // Properties
             protected override AsyncFunc<CancellationToken, ITextTemplateToken?> TryReadNext => TryReadNextAsync;
 
-            public RootContext(TextTemplateParserSettings settings, IAsyncEnumerator<ITextTemplateToken> tokenEnumerator, ILogger? logger) : base(settings, logger)
+            public RootContext(ITextTemplateCompilationContext compilationContext, TextTemplateParserSettings settings, IAsyncEnumerator<ITextTemplateToken> tokenEnumerator, ILogger? logger) : base(compilationContext, settings, logger)
             {
                 _tokenEnumerator = Guard.IsNotNull(tokenEnumerator);
                 ParserScope = TextTemplateEngineConstants.Compilation.ParserScopes.TemplateBody;
@@ -131,9 +135,10 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
             => _tokenEnumerator.DisposeAsync();
         }
 
-        private class SubContext : ITextTemplateParserContext
+        private class SubContext : ITextTemplateParserContext, ITextTemplateCompilationContext
         {
             // Fields
+            protected readonly ITextTemplateCompilationContext _compilationContext;
             protected readonly ILogger? _logger;
             private readonly int? _readLimit;
             private readonly int _offset;
@@ -146,8 +151,6 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
             protected bool _subScopeActive = false;
 
             // Properties
-            /// <inheritdoc/>
-            public required string CompilerProcess { get; init; }
             /// <inheritdoc/>
             public List<ITextTemplateToken> Buffer { get; }
             /// <inheritdoc/>
@@ -165,8 +168,13 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
             protected virtual AsyncFunc<CancellationToken, ITextTemplateToken?> TryReadNext => Guard.IsNotNull(_tryReadNext);
             protected TextTemplateParserSettings Settings { get; }
 
-            public SubContext(AsyncFunc<CancellationToken, ITextTemplateToken?> tryReadNext, TextTemplateParserSettings settings, ITextTemplateParserContext parentContext, int offset, int? readLimit, bool canRead, bool consumeTokens, Action? disposeAction, ILogger? logger)
+            public string CompilerProcess => _compilationContext.CompilerProcess;
+
+            public IServiceProvider CompilationScope => _compilationContext.CompilationScope;
+
+            public SubContext(AsyncFunc<CancellationToken, ITextTemplateToken?> tryReadNext, ITextTemplateCompilationContext compilationContext, TextTemplateParserSettings settings, ITextTemplateParserContext parentContext, int offset, int? readLimit, bool canRead, bool consumeTokens, Action? disposeAction, ILogger? logger)
             {
+                _compilationContext = Guard.IsNotNull(compilationContext);
                 _tryReadNext = Guard.IsNotNull(tryReadNext);
                 Settings = Guard.IsNotNull(settings);
                 ParentContext = Guard.IsNotNull(parentContext);
@@ -181,8 +189,9 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                 _logger = logger;
             }
 
-            protected SubContext(TextTemplateParserSettings settings, ILogger? logger)
+            protected SubContext(ITextTemplateCompilationContext compilationContext, TextTemplateParserSettings settings, ILogger? logger)
             {
+                _compilationContext = Guard.IsNotNull(compilationContext);
                 Settings = Guard.IsNotNull(settings);
                 Buffer = new List<ITextTemplateToken>();
                 Ast = new AbstractSyntaxTreeExpression();
@@ -335,12 +344,11 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                     var token = await TryReadNext(t);
                     if(token != null) _readTokens.Add(token);
                     return token;
-                } : TryReadNext, Settings, this, bufferOffset, bufferLimit, canReadNext, consumeTokens, () =>
+                } : TryReadNext, this, Settings, this, bufferOffset, bufferLimit, canReadNext, consumeTokens, () =>
                 {
                     _subScopeActive = false;
                 }, _logger)
                 {
-                    CompilerProcess = CompilerProcess,
                     ParserScope = scope,
                     ParentParser = current
                 };
@@ -404,6 +412,18 @@ namespace Sels.TextTemplateEngine.Compilation.Parsing
                 }
 
                 _disposeAction?.Invoke();
+            }
+
+            public T GetOptions<T>()
+                where T : class
+            {
+                return _compilationContext.GetOptions<T>();
+            }
+
+            public T[] GetCompilerServices<T>()
+                where T : class
+            {
+                return _compilationContext.GetCompilerServices<T>();
             }
         }
     }

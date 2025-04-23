@@ -13,6 +13,7 @@
 	<ItemGroup>
 		<PackageReference Include="Sels.Core" />
 		<PackageReference Include="Sels.Core.ServiceBuilder.Polly" />
+		<PackageReference Include="Sels.ObjectValidationFramework" />
 	</ItemGroup>
 
 </Project>

@@ -19,7 +19,7 @@ namespace Sels.TextTemplateEngine.Compilation
         /// <summary>
         /// Reads <paramref name="stream"/> and enumerates the tokens found in the stream.
         /// </summary>
-        /// <param name="compilerProcess">Gives an indication on what compiler process is being executed. Handy for resolving named options. Empty string if not provided</param>
+        /// <param name="compilationContext">The configured compilation context</param>
         /// <param name="stream">The stream to read from</param>
         /// <param name="configure">Delegate called to get the settings to use for lexing tokens from <paramref name="stream"/></param>
         /// <param name="encoding">The encoding of <paramref name="stream"/> if known</param>
@@ -27,7 +27,7 @@ namespace Sels.TextTemplateEngine.Compilation
         /// <param name="bufferLength">How many characters will be read at a time from <paramref name="stream"/></param>
         /// <param name="cancellationToken">Optional token to cancel the request</param>
         /// <returns>Async enumerator that will return any tokens reads from <paramref name="stream"/></returns>
-        public IAsyncEnumerable<ITextTemplateToken> LexAsync(string compilerProcess, Action<ITextTemplateLexerConfigurationBuilder> configure, Stream stream, Encoding? encoding = null, bool ownsStream = true, int bufferLength = 1024, CancellationToken cancellationToken = default);
+        public IAsyncEnumerable<ITextTemplateToken> LexAsync(ITextTemplateCompilationContext compilationContext, Action<ITextTemplateLexerConfigurationBuilder> configure, Stream stream, Encoding? encoding = null, bool ownsStream = true, int bufferLength = 1024, CancellationToken cancellationToken = default);
     }
 
     /// <summary>
@@ -255,12 +255,8 @@ namespace Sels.TextTemplateEngine.Compilation
     /// <summary>
     /// Context that contains the current state of the lexer when reading a stream.
     /// </summary>
-    public interface ITextTemplateLexerContext
+    public interface ITextTemplateLexerContext : ITextTemplateCompilationContext
     {
-        /// <summary>
-        /// The compiler process that is being executed. Handy for resolving named options. Empty string if not provided
-        /// </summary>
-        public string CompilerProcess { get; }
         /// <summary>
         /// The stream being read.
         /// </summary>

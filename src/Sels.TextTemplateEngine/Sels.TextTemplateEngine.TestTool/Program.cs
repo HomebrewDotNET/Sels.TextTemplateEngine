@@ -22,7 +22,7 @@ namespace Sels.TextTemplateEngine.TestTool
             filePath = Guard.IsNotNullOrWhitespace(filePath);
 
             var provider = new ServiceCollection()
-                .AddTextTemplateLexer()
+                .AddTextTemplateCompiler()
                 .AddLogging(x =>
                 {
                     x.AddConsole();
@@ -30,11 +30,11 @@ namespace Sels.TextTemplateEngine.TestTool
                 .BuildServiceProvider();
 
             var logger = provider.GetRequiredService<ILogger<Program>>();
-            var lexer = provider.GetRequiredService<ITextTemplateLexer>();
+            var compiler = provider.GetRequiredService<ITextTemplateCompiler>();
             var file = new FileInfo(filePath);
             logger.Log($"Lexing file <{file}> into tokens");
 
-            await foreach(var token in lexer.LexAsync("", x => { }, file.OpenRead(), cancellationToken: CancellationToken.None))
+            await foreach(var token in compiler.LexAsync(file.OpenRead(), ownsStream: true))
             {
                 logger.Log($"Token <{token.Type}> of length <{token.Length}> found at <{token.Position}>");
             }
@@ -44,8 +44,7 @@ namespace Sels.TextTemplateEngine.TestTool
         {
             filePath = Guard.IsNotNullOrWhitespace(filePath);
             var provider = new ServiceCollection()
-                .AddTextTemplateLexer()
-                .AddTextTemplateParser()
+                .AddTextTemplateCompiler()
                 .AddLogging(x =>
                 {
                     x.AddConsole();
@@ -53,12 +52,10 @@ namespace Sels.TextTemplateEngine.TestTool
                 })
                 .BuildServiceProvider();
             var logger = provider.GetRequiredService<ILogger<Program>>();
-            var lexer = provider.GetRequiredService<ITextTemplateLexer>();
-            var parser = provider.GetRequiredService<ITextTemplateParser>();
+            var compiler = provider.GetRequiredService<ITextTemplateCompiler>();
             var file = new FileInfo(filePath);
             logger.Log($"Lexing file <{file}> into tokens");
-            var tokens = lexer.LexAsync("", x => { }, file.OpenRead(), cancellationToken: CancellationToken.None);
-            var syntaxTree = await parser.ParseAsync("", x => { }, tokens, CancellationToken.None);
+            var syntaxTree = await compiler.ParseAsync(file.OpenRead(), ownsStream: true);
             await Helper.Async.Sleep(1000).ConfigureAwait(false);
             Console.WriteLine(syntaxTree.ToString(x => x.GetType().GetDisplayName(false)));
         }

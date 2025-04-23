@@ -1,5 +1,6 @@
 ﻿using Sels.Core;
 using Sels.TextTemplateEngine;
+using Sels.TextTemplateEngine.Compilation.Compiler;
 using Sels.TextTemplateEngine.Compilation.Lexing;
 using Sels.TextTemplateEngine.Compilation.Lexing.Tokens;
 using Sels.TextTemplateEngine.Compilation.Parsing;
@@ -18,6 +19,38 @@ namespace Microsoft.Extensions.DependencyInjection
     public static class ApplicationRegistrations
     {
         /// <summary>
+        /// Adds the text template engine compiler to the service collection.
+        /// </summary>
+        /// <param name="services">Collection to add the service registrations to</param>
+        /// <param name="configure">Optional delegate to configure the compiler</param>
+        /// <returns>
+        /// <returns><paramref name="services"/> for method chaining</returns></returns>
+        public static IServiceCollection AddTextTemplateCompiler(this IServiceCollection services, Action<TextTemplateCompilerOptions>? configure = null)
+        {
+            services = Guard.IsNotNull(services);
+            // Parser
+            services.AddTextTemplateParser();
+            // Lexer
+            services.AddTextTemplateLexer();
+            // Compiler
+            services.New<TextTemplateCompiler>()
+                    .TryRegister();
+            services.New<ITextTemplateCompiler, TextTemplateCompiler>()
+                    .Trace(x => x.Duration.OfAll)
+                    .AsSingleton()
+                    .AsForwardedService()
+                    .TryRegister();
+            // Options
+            services.AddOptions<TextTemplateCompilerOptions>()
+                    .Configure(configure ?? (x => { }));
+            services.BindOptionsFromConfig<TextTemplateCompilerOptions>(nameof(TextTemplateCompilerOptions), Sels.Core.Options.ConfigurationProviderNamedOptionBehaviour.Prefix, true);
+            services.AddValidationProfile<TextTemplateCompilerOptionsValidationProfile, string>();
+            services.AddOptionProfileValidator<TextTemplateCompilerOptions, TextTemplateCompilerOptionsValidationProfile>();
+
+            return services;
+        }
+
+        /// <summary>
         /// Adds the text template engine parser and expression parsers to the service collection.
         /// </summary>
         /// <param name="services">Collection to add the service registrations to</param>
@@ -30,6 +63,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     .TryRegister();
             services.New<ITextTemplateParser, TextTemplateParser>()
                     .Trace(x => x.Duration.OfAll)
+                    .AsSingleton()
                     .AsForwardedService()
                     .TryRegister();
 
@@ -76,6 +110,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.New<ITextTemplateLexer, TextTemplateLexer>()
                     .Trace(x => x.Duration.OfAll)
                     .AsForwardedService()
+                    .AsSingleton()
                     .TryRegister();
 
             // Token lexers
